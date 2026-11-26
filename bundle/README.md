@@ -125,6 +125,10 @@ DSH 端提供 `misc` / `tree` / `rag` / `handoff`；`ctx_status` / `ctx_forecast
 | 交接 | `handoff` | 生成 `.handoff/*.md` |
 | RAG 索引 | `rag-refresh --check` | manifest 条数 > 0 |
 
+## 不会调试？
+
+把根目录 `README.md`、本文件和 `docs/dsh-verification.md` 直接喂给 AI，让它按你的工作区、OpenCode/DSH 版本改路径和配置，并按上面的清单逐项验证。本安装包自带 3 个预置 skill 提示词（`local-index-rag` / `opencode-rag` / `make-decision`），装到 `~/.config/opencode/skills/` 即可被 OpenCode 读取。
+
 ## 目录与回滚
 
 ```

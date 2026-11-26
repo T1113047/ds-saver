@@ -121,6 +121,10 @@ DSH 端**不 import** `@deepseek-ai/dsh-tools`：第三方插件以 `link:` / �
 
 DSH 需要 `>=0.2.2-rc.5 <0.3.0-0`，实测 0.2.2-rc.5。`tree` / `rag` / `handoff` 不需要密钥；`misc` 仍需配置自己的便宜模型（见上）。完整实测记录见 [`docs/dsh-verification.md`](docs/dsh-verification.md)。
 
+### 不会调试？
+
+把 `README.md`、[`bundle/README.md`](bundle/README.md) 和 [`docs/dsh-verification.md`](docs/dsh-verification.md) 直接喂给 AI，让它按你的工作区、OpenCode/DSH 版本改配置并跑验证。`bundle/` 一键安装包内含 3 个预置 skill 提示词（`local-index-rag` / `opencode-rag` / `make-decision`）和配置模板，装完即可用。
+
 ## 用法
 
 主模型可这样调用：

@@ -9,6 +9,7 @@
 OpenCode 端与 DSH 端都已完成实机验证；`0.4.3` 已通过 npm Trusted Publishing（OIDC）发布，Trusted Publisher 配置已由首次发布验证。
 
 - GitHub：<https://github.com/T1113047/ds-saver>（`main` = 0.4.3）
+- GitHub Release：<https://github.com/T1113047/ds-saver/releases/tag/v0.4.3>（附 `ds-saver-0.4.3.tgz`）
 - npm：`ds-saver@0.4.3` 已发布（`latest`）；`0.4.1` 已 deprecate（CRLF）
 - 发布自动化：`.github/workflows/release.yml` 用 npm Trusted Publishing（OIDC）在 `v*` tag 上自动发布；配置见 `docs/release-automation.md`
 - 第三方库：仓库已有 `dsh-plugin` topic；awesome-deepseek-harness-plugins 已收录（PR #1124），deepseek1024.com 目录已出现 `T1113047/ds-saver`；目录的 `install` 仍是 GitHub 目标，等 npm 身份同步后 Market 才会标为可自动安装

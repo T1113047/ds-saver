@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+- 文档同步：根 README 与 `bundle/README.md` 增加“不会调试？”说明（把 README、bundle README、
+  DSH 验证记录喂给 AI；一键包内含 3 个预置 skill 提示词），并更新 npm 发布状态与 DSH 安装说明。
+- 无运行时变更；重新打包以让 npm 页面带上最新 README。
+
 ## 0.4.0
 
 - 新增一键安装包 `bundle/`：一条命令装 OpenCode 插件 shim、三个通用版 skills、

@@ -1,10 +1,16 @@
 # Changelog
 
+## 0.4.2
+
+- 修复 0.4.0 / 0.4.1 npm 包的 CRLF 行尾：`bundle/install.sh` 在 Linux/macOS 上会报
+  `set: pipefail: invalid option name`，`ds-saver-install` 也会因 `bash\r` 失败；所有文本文件统一为 LF。
+- 新增 `.gitattributes`（`eol=lf`）与 `test/lf.mjs`，`npm run check` / CI 阻断 CRLF 复发。
+
 ## 0.4.1
 
-- 文档同步：根 README 与 `bundle/README.md` 增加“不会调试？”说明（把 README、bundle README、
-  DSH 验证记录喂给 AI；一键包内含 3 个预置 skill 提示词），并更新 npm 发布状态与 DSH 安装说明。
-- 无运行时变更；重新打包以让 npm 页面带上最新 README。
+- Windows / Git Bash：盘符路径归一化、shim 使用 `file://` URL、DSH 安装提示输出原生路径。
+- 文档同步：根 README 与 `bundle/README.md` 增加“不会调试？”说明，并更新 npm 发布状态与 DSH 安装说明。
+- 注意：Windows 打包带入 CRLF 行尾，0.4.2 修复。
 
 ## 0.4.0
 

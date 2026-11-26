@@ -6,10 +6,10 @@
 
 ## 1. 一句话状态
 
-OpenCode 端与 DSH 端都已完成实机验证；`0.4.1`（含一键安装包 `bundle/`）已推送到 GitHub `main`，并已发布到 npm `latest`。
+OpenCode 端与 DSH 端都已完成实机验证；`0.4.1` 已推送到 GitHub `main` 并发布到 npm `latest`，但 Windows 打包带入 CRLF 行尾；`0.4.2` 已修 LF 并推送 GitHub，待 npm 发布。
 
-- GitHub：<https://github.com/T1113047/ds-saver>（`main` = 0.4.1）
-- npm：`ds-saver@0.4.1` 已发布（`latest`）；`0.0.0-stage` 占位版本已 deprecate
+- GitHub：<https://github.com/T1113047/ds-saver>（`main` = 0.4.2）
+- npm：`ds-saver@0.4.1` 已发布（`latest`，`bundle/install.sh` 在 Unix 因 CRLF 不可执行，建议 deprecate）；`0.4.2` 待发布
 - 第三方库：仓库已有 `dsh-plugin` topic；awesome-deepseek-harness-plugins 已收录（PR #1124），deepseek1024.com 目录已出现 `T1113047/ds-saver`
 - 本地 tarball：`ds-saver-0.4.1.tgz`（在仓库根目录，已 gitignore）
 
@@ -22,6 +22,7 @@ OpenCode 端与 DSH 端都已完成实机验证；`0.4.1`（含一键安装包 `
 5. **文档/文章**：`docs/dsh-verification.md`、`docs/dsh-adapter.md`、`docs/article-dsh-fresh-install.md`。
 6. **0.4.0 一键包**：`bundle/install.sh` 实测装上插件 shim、`pkg/` 运行副本、3 个 skills、6 个工具、示例配置；`pkg/` 可直接 `dsh plugin add`。`ctx_status` / `ctx_forecast` 用安装副本跑通真实 OpenCode 会话。
 7. **Windows shim 修复**：Git Bash 下最初生成 `/c/...` 路径，Windows Node 报 `Cannot find module 'C:\c\...'`；改为 `file:///C:/...` 并归一化 `--prefix C:\...` 后，Node 可直接加载。
+8. **0.4.2 行尾修复**：0.4.0 / 0.4.1 的 npm 包为 CRLF，`bundle/install.sh` 在 Linux/macOS 报 `set: pipefail: invalid option name`；0.4.2 统一 LF，并加 `.gitattributes` + `test/lf.mjs` 防回归。
 
 ## 3. 项目结构
 

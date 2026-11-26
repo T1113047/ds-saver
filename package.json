@@ -1,6 +1,6 @@
 {
   "name": "ds-saver",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Context and token saver for DeepSeek workflows on OpenCode and DeepSeek Harness (DSH)",
   "type": "module",
   "license": "MIT",
@@ -53,7 +53,7 @@
   },
   "scripts": {
     "test": "node test/smoke.mjs",
-    "check": "node --check index.js && node --check dsh/index.js && node --check test/smoke.mjs"
+    "check": "node --check index.js && node --check dsh/index.js && node --check test/smoke.mjs && node test/lf.mjs"
   },
   "bin": {
     "ds-saver-install": "./bundle/install.sh"

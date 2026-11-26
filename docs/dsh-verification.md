@@ -89,6 +89,16 @@ dsh --profile headless-fresh --dump-config-schema
 
 `misc` 使用临时配置把 `qwen-tp` 指向 `https://maas.qianwenaiapi.com/compatible-mode/v1`，`apiKeyEnv=QWEN_TOKEN_PLAN_API_KEY`；说明「换 baseURL + model + key」的自定义 provider 链路在 DSH 上同样可用。
 
+### 6. 0.3.0：rag filter 实测
+
+同一 profile 的 linked 代码更新后（无需重装），再跑一次：
+
+```text
+rag(query="RAG_FILTER_MAX_CANDIDATES", path=".", topK=10, filter=true, filter_topK=3)
+```
+
+模型返回 `RAG_FILTER_OK`，工具内容为两条 `index.js:行号 — 摘要（理由）`，末尾 `picked 2 / candidates 2`。说明 DSH 适配层新增的 `filter` / `filter_topK` / `model` 参数、便宜模型 JSON 筛选、候选路径/行号校验都正常。
+
 ## 结论
 
 - 全新 DSH profile 上，官方 `dsh plugin add` → `cordis.patch.yml` → `ds-saver/dsh` → `ctx.tools.register` 全链路可用。

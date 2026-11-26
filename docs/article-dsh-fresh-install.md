@@ -135,4 +135,17 @@ Desktop 版也可以在 **设置 → 插件** 里添加本地目录或 npm 包�
 
 这次真正有价值的不是“插件能装”，而是找到了第三方 DSH 插件最容易踩的解析边界，并把依赖降到了零。对插件作者来说，**不要 import 你不拥有的运行时包**，至少在 DSH preview 阶段如此；把用到的几十行 helper 拿进自己的包里，比赌 peer 解析可靠得多。
 
+## 附：0.3.0 的 `rag filter`
+
+发布前又补了一个很实用的能力：本地检索不再把所有命中一股脑塞给主模型，而是先取最多 12 条候选（命中行前后各 2 行、约 800 字符/条），交给便宜模型输出 JSON 筛选结果，插件再校验路径/行号必须落在候选集合内，只注入 3–5 条 `文件:行号 — 摘要（理由）`，末尾附 `picked N / candidates M`。
+
+```text
+rag(query="重试逻辑在哪", path="src", filter=true, filter_topK=5, model="hy4")
+```
+
+无 key、HTTP 错误、JSON 非法、筛选结果为空都会自动回退原始命中，metadata 标记 `filter_fallback` / `filter_error`，不会中断主流程；`filter=true` 会强制走内置检索，保证拿到结构化路径与行号。这一步本质上就是“先用子 agent 筛内容，再注入主 LLM”，只是把子 agent 换成了更便宜的独立模型调用。
+
+在全新 DSH 上实测：`picked 2 / candidates 2`，两条都带摘要与命中理由。
+
 仓库：<https://github.com/T1113047/ds-saver>
+

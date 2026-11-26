@@ -13,7 +13,7 @@ OpenCode 2.4.x 与 DeepSeek Harness (DSH) 的上下文/杂活插件，针对 Dee
 | `ctx_report` | 采集一条匿名会话指标到本地 `metrics.jsonl`，用于真实数据反馈与阈值校准 |
 | `handoff` | 生成交接文档并落盘，到 55–60% 时开新窗口，而不是原地焚化 |
 | `tree` | 只读输出紧凑目录树；默认忽略依赖/构建目录，拒绝敏感路径，超限标注截断 |
-| `rag` | 轻量本地检索；优先 `DS_SAVER_RAG_CMD`，否则内置分词行匹配，返回「文件:行号: 摘要」 |
+| `rag` | 轻量本地检索；优先 `DS_SAVER_RAG_CMD`，否则内置分词行匹配，返回「文件:行号: 摘要」；`filter: true` 先用便宜模型筛 3–5 条再注入 |
 
 **不做**：不改历史、不删消息、不做原地压缩、不跑 shell、不改文件。
 
@@ -125,9 +125,12 @@ misc(task="筛选这次 grep 结果里与登录相关的行", material="...", ma
 misc(task="读这两个文件，找出配置差异", paths=["a.conf","b.conf"], mode="agent")
 tree(path="src", depth=3, maxEntries=400)
 rag(query="setup 注册了哪些工具", path="src", topK=8, include="*.js")
+rag(query="重试逻辑在哪", path="src", filter=true, filter_topK=5, model="hy4")
 ```
 
 `tree` 默认忽略 `.git`、`node_modules`、`__pycache__`、`.next`、`dist`、`build`、`backups`、`*.pyc`；`rag` 未配置 `DS_SAVER_RAG_CMD` 时用内置检索（单文件 ≤512KB、最多 5000 个文件）。
+
+`rag(filter=true)` 会取最多 12 条候选、命中行前后各 2 行（每条约 800 字符）交给便宜模型，模型返回 JSON 数组后只保留落在候选集合内的 3–5 条，输出 `文件:行号 — 摘要（理由）` 和 `picked N / candidates M`。筛选失败（无 key、HTTP 错误、JSON 非法、空结果）自动回退原始命中，并在 metadata 里标 `filter_fallback` / `filter_error`；`filter=true` 会强制走内置检索，以便拿到结构化路径与行号。
 
 `agent` 模式只允许 `read`：模型返回 `{"read":["路径"]}` 时插件读文件并继续，最多 3 轮；不会执行命令或改文件。
 

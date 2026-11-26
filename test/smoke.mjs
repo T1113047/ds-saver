@@ -294,6 +294,67 @@ try {
   assert.equal(ragFallback.metadata.engine, "builtin");
   assert.match(ragFallback.content, /a\.js:1:/);
 
+  // 9b) rag + filter：模型只回选中项，metadata 有 picked/candidates
+  await writeConfig({
+    order: ["hy4"],
+    timeoutSec: 10,
+    providers: {
+      hy4: {
+        baseURL: "https://tokenhub.test/v1",
+        model: "hy4-flash",
+        apiKey: "test-hy4",
+      },
+    },
+  });
+  calls = installFetch(() =>
+    ok('[{"path":"tree-fixture/a.js","line":1,"summary":"alpha 命中","reason":"直接支持 needle 结论"}]'),
+  );
+  const ragFiltered = await rag.execute(
+    { query: "needle", path: "tree-fixture", topK: 5, filter: true, filter_topK: 2 },
+    { sessionID: "ses_test" },
+  );
+  assert.equal(ragFiltered.metadata.engine, "rag+filter");
+  assert.equal(ragFiltered.metadata.picked, 1);
+  assert.equal(ragFiltered.metadata.candidates, 2);
+  assert.equal(ragFiltered.metadata.provider, "hy4");
+  assert.match(ragFiltered.content, /a\.js:1 — alpha 命中（直接支持 needle 结论）/);
+  assert.match(ragFiltered.content, /picked 1 \/ candidates 2/);
+  assert.doesNotMatch(ragFiltered.content, /b\.md/);
+  assert.match(calls[0].body.messages[0].content, /只输出 JSON 数组/);
+  assert.match(calls[0].body.messages[0].content, /1: needle alpha/);
+  assert.match(calls[0].body.messages[0].content, /不确定时保留路径而不是正文/);
+
+  // 9c) 模型返回非法 JSON → 回退原始命中
+  calls = installFetch(() => ok("我觉得 a.js 和 b.md 都不错"));
+  const ragBadJson = await rag.execute(
+    { query: "needle", path: "tree-fixture", filter: true },
+    { sessionID: "ses_test" },
+  );
+  assert.equal(ragBadJson.metadata.filter_fallback, true);
+  assert.equal(ragBadJson.metadata.engine, "builtin");
+  assert.ok(ragBadJson.metadata.filter_error);
+  assert.match(ragBadJson.content, /a\.js:1:/);
+  assert.doesNotMatch(ragBadJson.content, /picked /);
+
+  // 9d) 无 key → 回退原始命中，不报错
+  await writeConfig({
+    order: ["hy4"],
+    providers: {
+      hy4: {
+        baseURL: "https://tokenhub.test/v1",
+        model: "hy4-flash",
+        apiKeyEnv: "NO_SUCH_RAG_FILTER_KEY",
+      },
+    },
+  });
+  const ragNoKey = await rag.execute(
+    { query: "needle", path: "tree-fixture", filter: true },
+    { sessionID: "ses_test" },
+  );
+  assert.equal(ragNoKey.metadata.filter_fallback, true);
+  assert.match(ragNoKey.metadata.filter_error, /API Key/);
+  assert.match(ragNoKey.content, /a\.js:1:/);
+
   assert.deepEqual(__test.parseReadRequest('{"read":["a.md","b.md"]}'), [
     "a.md",
     "b.md",
@@ -305,7 +366,7 @@ try {
   assert.deepEqual(__test.OFFICIAL.mimo.model, "mimo-v2.6-flash");
   assert.deepEqual(__test.OFFICIAL.qwen.model, "qwen3.8-flash");
 
-  console.log("smoke: 9 组断言全部通过");
+  console.log("smoke: 12 组断言全部通过");
 } finally {
   delete global.fetch;
   await fs.rm(tmp, { recursive: true, force: true });

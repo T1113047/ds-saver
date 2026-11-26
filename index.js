@@ -1487,7 +1487,7 @@ async function ragSearch(root, query, topK, include) {
       total += 1;
       if (hits.length >= RAG_MAX_HITS) continue;
       const excerpt = lines[i].trim().replace(/\s+/g, " ").slice(0, 200);
-      hits.push({ file: rel, line: i + 1, score, excerpt });
+      hits.push({ file: rel, line: i + 1, score, excerpt, abs: file });
     }
   }
 
@@ -1502,10 +1502,151 @@ async function ragSearch(root, query, topK, include) {
     text: picked.length
       ? picked.map((h) => `${h.file}:${h.line}: ${h.excerpt}`).join("\n")
       : "(无命中)",
+    picked,
     total,
     scanned,
     files: files.length,
     truncated: total > picked.length,
+  };
+}
+
+const RAG_FILTER_MAX_CANDIDATES = 12;
+const RAG_FILTER_CONTEXT_CHARS = 800;
+
+const oneLine = (value) =>
+  String(value ?? "").replace(/\s+/g, " ").trim();
+
+async function readRagCandidate(absFile, line, maxChars) {
+  const raw = await fs.readFile(absFile, "utf8");
+  const lines = raw.split(/\r?\n/);
+  const start = Math.max(0, line - 3);
+  const end = Math.min(lines.length, line + 2);
+  const parts = [];
+  let used = 0;
+  for (let i = start; i < end; i += 1) {
+    const piece = `${i + 1}: ${lines[i]}`;
+    if (used + piece.length + 1 > maxChars) {
+      parts.push(`${i + 1}: ... [上下文已截断]`);
+      break;
+    }
+    parts.push(piece);
+    used += piece.length + 1;
+  }
+  return parts.join("\n");
+}
+
+async function gatherRagCandidates(root, hits, maxCandidates) {
+  const out = [];
+  for (const hit of hits.slice(0, maxCandidates)) {
+    const abs = hit.abs || path.resolve(root, hit.file);
+    assertSafePath(abs);
+    let context = `${hit.line}: ${hit.excerpt}`;
+    try {
+      context =
+        (await readRagCandidate(abs, hit.line, RAG_FILTER_CONTEXT_CHARS)) ||
+        context;
+    } catch {
+      // 读取失败时退回单行摘要，继续筛选
+    }
+    out.push({ path: hit.file, line: hit.line, context });
+  }
+  return out;
+}
+
+function buildRagFilterPrompt(query, candidates, maxPicks) {
+  const blocks = candidates.map(
+    (c) => `--- ${c.path}:${c.line} ---\n${c.context}`,
+  );
+  return [
+    "你是检索结果的筛选器：只判断哪些候选真正支持回答 query，不做推理扩展。",
+    `query：${query}`,
+    "",
+    "规则：",
+    `1. 最多选 ${maxPicks} 条，宁少勿多；不确定时保留路径而不是正文。`,
+    "2. 只能从给出的候选中选，不得编造路径或行号。",
+    "3. 每条必须能回答：它支持哪个结论；说不出就删掉。",
+    "4. 只输出 JSON 数组，不要解释、不要 Markdown 代码块。",
+    '5. 元素格式：{"path":"相对路径","line":行号,"summary":"一句话摘要","reason":"为什么选它，支持哪个结论"}',
+    "",
+    "候选：",
+    blocks.join("\n\n") || "(无候选)",
+  ].join("\n");
+}
+
+function parseRagFilterSelection(text) {
+  const raw = String(text || "");
+  const start = raw.indexOf("[");
+  const end = raw.lastIndexOf("]");
+  if (start === -1 || end <= start) throw new Error("模型未返回 JSON 数组");
+  const arr = JSON.parse(raw.slice(start, end + 1));
+  if (!Array.isArray(arr)) throw new Error("模型返回不是 JSON 数组");
+  return arr;
+}
+
+function normalizeCandidatePath(rawPath, root) {
+  let s = String(rawPath || "").trim().replaceAll("\\", "/");
+  if (s.startsWith("./")) s = s.slice(2);
+  if (path.isAbsolute(s)) {
+    assertSafePath(s);
+    const rel = path.relative(root, s).replaceAll("\\", "/");
+    if (rel && rel !== ".." && !rel.startsWith("../")) s = rel;
+  } else {
+    // 容错：模型可能带上检索根目录名
+    const base = path.basename(String(root || "").replaceAll("\\", "/"));
+    if (base && s.startsWith(`${base}/`)) s = s.slice(base.length + 1);
+  }
+  return s;
+}
+
+async function filterRagResult(config, root, query, hits, opts = {}) {
+  const maxPicks = clampInt(opts.filterTopK, 1, 8, 5);
+  const candidates = await gatherRagCandidates(
+    root,
+    Array.isArray(hits) ? hits : [],
+    RAG_FILTER_MAX_CANDIDATES,
+  );
+  if (!candidates.length) throw new Error("没有候选可筛选");
+
+  const known = new Set(
+    candidates.map((c) => `${normalizeCandidatePath(c.path, root)}:${c.line}`),
+  );
+  const prompt = buildRagFilterPrompt(query, candidates, maxPicks);
+  assertNoSecrets(prompt);
+
+  const result = await callWithFallback(config, opts.model, prompt, {
+    timeoutSec: config.timeoutSec,
+  });
+  const arr = parseRagFilterSelection(result.text);
+
+  const picked = [];
+  const seen = new Set();
+  for (const item of arr) {
+    if (picked.length >= maxPicks) break;
+    const rel = normalizeCandidatePath(item?.path, root);
+    const line = clampInt(item?.line, 1, Number.MAX_SAFE_INTEGER, 0);
+    const key = `${rel}:${line}`;
+    if (!line || !known.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    picked.push({
+      path: rel,
+      line,
+      summary: oneLine(item?.summary).slice(0, 120) || "(无摘要)",
+      reason: oneLine(item?.reason).slice(0, 160) || "(未说明理由)",
+    });
+  }
+  if (!picked.length) throw new Error("模型筛选结果为空或不在候选内");
+
+  const lines = picked.map(
+    (p) => `${p.path}:${p.line} — ${p.summary}（${p.reason}）`,
+  );
+  lines.push("", `picked ${picked.length} / candidates ${candidates.length}`);
+
+  return {
+    text: lines.join("\n"),
+    picked: picked.length,
+    candidates: candidates.length,
+    provider: result.provider,
+    model: result.model,
   };
 }
 
@@ -1532,7 +1673,8 @@ function ragTool(root) {
     name: "rag",
     description:
       "轻量本地检索：优先执行 DS_SAVER_RAG_CMD（query 作为最后一个参数），未配置或失败时回退纯 Node 行匹配；" +
-      "只读文本文件（单文件 512KB、最多 5000 个），拒绝敏感路径，返回「文件:行号: 摘要」。",
+      "只读文本文件（单文件 512KB、最多 5000 个），拒绝敏感路径，返回「文件:行号: 摘要」。" +
+      "filter=true 时先用便宜模型把候选筛到 3–5 条再注入；失败自动回退原始命中。",
     input: {
       type: "object",
       properties: {
@@ -1540,6 +1682,21 @@ function ragTool(root) {
         path: { type: "string", description: "目录或文件，默认 cwd；相对路径不得越出 cwd" },
         topK: { type: "integer", minimum: 1, maximum: 30, description: "默认 8，上限 30" },
         include: { type: "string", description: "可选 glob，如 *.js 或 src/**/*.ts" },
+        filter: {
+          type: "boolean",
+          description: "true 时先让便宜模型筛候选再注入（默认 false）",
+        },
+        filter_topK: {
+          type: "integer",
+          minimum: 1,
+          maximum: 8,
+          description: "筛选后最终注入条数，默认 5",
+        },
+        model: {
+          type: "string",
+          description:
+            "筛选用的模型：auto | hy4 | mimo | qwen | provider/model（可选）",
+        },
       },
       required: ["query"],
       additionalProperties: false,
@@ -1554,7 +1711,10 @@ function ragTool(root) {
         typeof input?.include === "string" && input.include.trim()
           ? input.include.trim()
           : "";
-      const ragCmd = envFirst("RAG_CMD");
+      const filter = input?.filter === true;
+      const filterTopK = clampInt(input?.filter_topK, 1, 8, 5);
+      // filter 需要结构化的路径/行号候选，因此强制走内置检索
+      const ragCmd = filter ? "" : envFirst("RAG_CMD");
 
       if (ragCmd) {
         try {
@@ -1575,20 +1735,47 @@ function ragTool(root) {
       }
 
       const result = await ragSearch(target, query, topK, include);
-      return {
-        content: result.text,
-        metadata: {
-          engine: "builtin",
-          query,
-          root: target,
-          topK,
-          include: include || null,
-          hits: result.total,
-          scanned: result.scanned,
-          files: result.files,
-          truncated: result.truncated,
-        },
+      const metadata = {
+        engine: "builtin",
+        query,
+        root: target,
+        topK,
+        include: include || null,
+        hits: result.total,
+        scanned: result.scanned,
+        files: result.files,
+        truncated: result.truncated,
       };
+
+      if (!filter) return { content: result.text, metadata };
+
+      try {
+        const config = await loadConfig();
+        const filtered = await filterRagResult(config, target, query, result.picked, {
+          filterTopK,
+          model: input?.model,
+        });
+        return {
+          content: filtered.text,
+          metadata: {
+            ...metadata,
+            engine: "rag+filter",
+            picked: filtered.picked,
+            candidates: filtered.candidates,
+            provider: filtered.provider,
+            model: filtered.model,
+          },
+        };
+      } catch (err) {
+        return {
+          content: result.text,
+          metadata: {
+            ...metadata,
+            filter_fallback: true,
+            filter_error: oneLine(err?.message || err).slice(0, 200),
+          },
+        };
+      }
     },
   };
 }

@@ -6,20 +6,22 @@
 
 ## 1. 一句话状态
 
-OpenCode 端与 DSH 端都已完成实机验证；`0.3.0` 源码已在 GitHub `main`，本地 `0.4.0` 一键安装包已加入 `bundle/`（未推送、未发布）；npm 发布**被账号临时安全暂停卡住**（不是包本身的问题）。
+OpenCode 端与 DSH 端都已完成实机验证；`0.4.0`（含一键安装包 `bundle/`）已推送到 GitHub `main`；npm 发布**被账号临时安全暂停卡住**（不是包本身的问题）。
 
-- GitHub：<https://github.com/T1113047/ds-saver>（`main` = `4bbb877`，0.3.0；本地 0.4.0 待推）
-- npm：`ds-saver@0.3.0` 已打包（19 files / 58.0 kB），**未发布**
+- GitHub：<https://github.com/T1113047/ds-saver>（`main` = 0.4.0）
+- npm：`ds-saver@0.4.0` 已打包（30 files），**未发布**
 - 第三方库：仓库已有 `dsh-plugin` topic，DSH Hub 会按 topic 自动同步（待 npm 可装后复核）
-- 本地 tarball：`ds-saver-0.3.0.tgz`（在仓库根目录，已 gitignore）
+- 本地 tarball：`ds-saver-0.4.0.tgz`（在仓库根目录，已 gitignore）
 
 ## 2. 这次做了什么
 
-1. **DSH 全新 profile 实测**：临时 `DSH_HOME` + `headless-fresh`，官方 `dsh plugin add` 安装；`tree` / `rag` / `misc` / `handoff` 四工具被模型实际调用成功。
+1. **DSH 全新 profile 实测**：临时 `DSH_HOME` + `headless-fresh`，官方 `dsh plugin add` 安装；`tree` / `rag` / `misc` / `handoff` 四工具被模型实际调用成功。之后又用 `0.4.0` tarball 在另一个全新 `DSH_HOME` / profile 上复测，四工具与 `rag filter` 均通过。
 2. **修掉 DSH 导入阻塞**：`dsh/index.js` 原 `import '@deepseek-ai/dsh-tools'` 在 linked 安装下必然失败（`Cannot find package`）。改为内置 `defineDshTool`（参数 DSL → 原始 JSON Schema + 参数校验），移除 `@deepseek-ai/*` peerDependencies。
 3. **0.3.0 `rag filter`**：检索候选（最多 12 条、命中行前后 2 行、约 800 字符/条）→ 便宜模型输出 JSON 选择 → 校验路径/行号必须落在候选内 → 只注入 3–5 条 `文件:行号 — 摘要（理由）`，附 `picked N / candidates M`；失败自动回退原始命中。
 4. **Windows 测试回归**：smoke 测试里用模板字符串拼 JSON 导致路径反斜杠非法转义，改为 `JSON.stringify`。
 5. **文档/文章**：`docs/dsh-verification.md`、`docs/dsh-adapter.md`、`docs/article-dsh-fresh-install.md`。
+6. **0.4.0 一键包**：`bundle/install.sh` 实测装上插件 shim、`pkg/` 运行副本、3 个 skills、6 个工具、示例配置；`pkg/` 可直接 `dsh plugin add`。`ctx_status` / `ctx_forecast` 用安装副本跑通真实 OpenCode 会话。
+7. **Windows shim 修复**：Git Bash 下最初生成 `/c/...` 路径，Windows Node 报 `Cannot find module 'C:\c\...'`；改为 `file:///C:/...` 并归一化 `--prefix C:\...` 后，Node 可直接加载。
 
 ## 3. 项目结构
 

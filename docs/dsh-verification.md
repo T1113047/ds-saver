@@ -99,6 +99,22 @@ rag(query="RAG_FILTER_MAX_CANDIDATES", path=".", topK=10, filter=true, filter_to
 
 模型返回 `RAG_FILTER_OK`，工具内容为两条 `index.js:行号 — 摘要（理由）`，末尾 `picked 2 / candidates 2`。说明 DSH 适配层新增的 `filter` / `filter_topK` / `model` 参数、便宜模型 JSON 筛选、候选路径/行号校验都正常。
 
+### 7. 0.4.0：tarball、一键包与 ctx 工具
+
+2026-11-27 用第三个全新 `DSH_HOME` / profile 复测 `ds-saver-0.4.0.tgz`：
+
+- `dsh plugin add ds-saver-0.4.0.tgz` → `+ ds-saver 0.4.0`
+- `--dump-config` → `- id: ds-saver / name: ds-saver/dsh`
+- `--dump-config-schema` → 退出码 0
+- `tree` → `TREE_OK`；`rag(filter=true)` → `picked 2 / candidates 3`；`handoff` → 落盘；`misc` → `MISC_OK`
+
+`bundle/install.sh` 在临时 workspace / prefix / data 下实测（Git Bash，Windows 原生路径）：
+
+- 装上 shim + `pkg/` 运行副本、3 个 skills、6 个工具、示例配置；
+- 把安装出的 `pkg/` 直接 `dsh plugin add` 到新 profile 也成功；
+- 用安装副本跑 `ctx_status`：`context 330,824 / 31.55% / level 提醒`；`ctx_forecast` 正常返回 JSON；
+- 修复：最初 shim 写成 `/c/...`，Windows Node 报 `Cannot find module 'C:\c\...'`；改为 `file:///C:/...` 后 `SHIM_OK`。
+
 ## 结论
 
 - 全新 DSH profile 上，官方 `dsh plugin add` → `cordis.patch.yml` → `ds-saver/dsh` → `ctx.tools.register` 全链路可用。

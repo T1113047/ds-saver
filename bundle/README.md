@@ -53,6 +53,8 @@ cp ~/.config/opencode/ds-saver.example.json ~/.config/opencode/ds-saver.json
 --dry-run         只打印，不写文件
 ```
 
+Windows（Git Bash）下可以直接传 `--prefix 'C:\Users\you\.config\opencode'`；安装器会归一化路径，shim 写成 `file:///C:/...`，Node/OpenCode 可直接加载。不要用 WSL 的 `bash.exe` 装 Windows 侧目录，除非 OpenCode 也跑在同一 WSL 里。
+
 ## 便宜模型配置
 
 `misc` 和 `rag(filter=true)` 需要一个便宜模型。三种方式任选：

@@ -125,9 +125,25 @@ done
 
 abspath() {
   case "$1" in
+    [A-Za-z]:[\\/]*)
+      if command -v cygpath >/dev/null 2>&1; then
+        cygpath -u "$1"
+      else
+        printf '%s' "$1"
+      fi
+      ;;
     /*) printf '%s' "$1" ;;
     *) printf '%s/%s' "$PWD" "$1" ;;
   esac
+}
+
+# Git Bash / MSYS 的 /c/... 需要转回 Windows 原生路径，Node 才能解析
+native_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -w "$1"
+  else
+    printf '%s' "$1"
+  fi
 }
 WORKSPACE="$(abspath "$WORKSPACE")"
 PREFIX="$(abspath "$PREFIX")"
@@ -182,7 +198,10 @@ else
   done
 fi
 SHIM="$(mktemp)"
-printf 'export { default } from "%s";\n' "$TARGET" > "$SHIM"
+# 用 file:// URL，兼容 Git Bash 的 /c/... 与 POSIX 的 /home/...
+TARGET_NATIVE="$(native_path "$TARGET")"
+TARGET_URL="$(node -e 'console.log(require("node:url").pathToFileURL(process.argv[1]).href)' "$TARGET_NATIVE")"
+printf 'export { default } from "%s";\n' "$TARGET_URL" > "$SHIM"
 if [ -f "$PLUGIN_DST" ] && cmp -s "$SHIM" "$PLUGIN_DST"; then
   say "  已是最新 $PLUGIN_DST"
 else
@@ -264,7 +283,8 @@ say "  2) 验证插件：新开 OpenCode 会话，问一句“用 tree 看下当
 say "  3) 建索引：$DATA/bin/rag-refresh"
 DSH_PKG="$PLUGIN_PKG"
 [ "$LINK" = 1 ] && DSH_PKG="$SRC"
-say "  4) DSH：dsh plugin --profile <profile> add $DSH_PKG"
+DSH_PKG_NATIVE="$(native_path "$DSH_PKG")"
+say "  4) DSH：dsh plugin --profile <profile> add $DSH_PKG_NATIVE"
 say "  5) 完整说明：$SRC/bundle/README.md"
 say ""
 say "回滚：所有被覆盖的文件都保留为 <原文件>.bak.$TS"

@@ -26,6 +26,8 @@
   `injectSystemPrompt` / `autoIndex`），避免顶层键被忽略。
 - 修正缓存成本口径：500K / 650K 按 0.02 元/百万为 0.010 / 0.013 元。
 - DSH 的 `misc` 参数说明改为与实现一致：无 `paths` 时仍可跑只读循环，只能读模型点名的文件。
+- 修复 Git Bash / MSYS 下生成的 OpenCode shim 使用 `/c/...` 导致 Windows Node 无法解析的问题：
+  shim 改为 `file:///C:/...` 的 file URL，`--prefix C:\...` 也能被归一化；实测 Node 可直接加载。
 
 ## 0.3.0
 

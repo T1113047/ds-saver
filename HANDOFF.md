@@ -6,11 +6,11 @@
 
 ## 1. 一句话状态
 
-OpenCode 端与 DSH 端都已完成实机验证；`0.4.0`（含一键安装包 `bundle/`）已推送到 GitHub `main`；npm 发布**被账号临时安全暂停卡住**（不是包本身的问题）。
+OpenCode 端与 DSH 端都已完成实机验证；`0.4.0`（含一键安装包 `bundle/`）已推送到 GitHub `main`，并已发布到 npm `latest`。
 
 - GitHub：<https://github.com/T1113047/ds-saver>（`main` = 0.4.0）
-- npm：`ds-saver@0.4.0` 已打包（30 files），**未发布**
-- 第三方库：仓库已有 `dsh-plugin` topic，DSH Hub 会按 topic 自动同步（待 npm 可装后复核）
+- npm：`ds-saver@0.4.0` 已发布（`latest`）；registry 里另有一个 `0.0.0-stage` 占位版本，未 deprecate（需 OTP，不影响 `npm install ds-saver`）
+- 第三方库：仓库已有 `dsh-plugin` topic，DSH Hub 会按 topic 自动同步
 - 本地 tarball：`ds-saver-0.4.0.tgz`（在仓库根目录，已 gitignore）
 
 ## 2. 这次做了什么

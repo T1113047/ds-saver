@@ -115,6 +115,22 @@ rag(query="RAG_FILTER_MAX_CANDIDATES", path=".", topK=10, filter=true, filter_to
 - 用安装副本跑 `ctx_status`：`context 330,824 / 31.55% / level 提醒`；`ctx_forecast` 正常返回 JSON；
 - 修复：最初 shim 写成 `/c/...`，Windows Node 报 `Cannot find module 'C:\c\...'`；改为 `file:///C:/...` 后 `SHIM_OK`。
 
+### 8. 从 npm registry 按包名安装（0.4.0 已发布）
+
+`npm publish` 后，用第四个全新 profile 走终端用户的真实路径：
+
+```sh
+dsh plugin --profile npm-0.4.0 add ds-saver
+```
+
+结果：
+
+- pnpm 从 registry 下载并安装 `+ ds-saver 0.4.0`（约 7.1s）；
+- `--dump-config` → `- id: ds-saver / name: ds-saver/dsh`；
+- `--dump-config-schema` → 退出码 0；
+- `tree` → `TREE_OK`；`rag(filter=true)` → `picked 2 / candidates 3`；
+- 干净目录 `npm install ds-saver@0.4.0` → `0.4.0`，`node_modules/ds-saver` 含 `bundle/tools/ctx-usage.py`。
+
 ## 结论
 
 - 全新 DSH profile 上，官方 `dsh plugin add` → `cordis.patch.yml` → `ds-saver/dsh` → `ctx.tools.register` 全链路可用。

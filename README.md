@@ -106,10 +106,10 @@ DS_SAVER_WORKSPACE=/path/to/your/workspace ./install.sh
 已在 DSH `0.2.2-rc.5` 的**全新 headless profile** 上实测通过：官方 `dsh plugin add` 安装，`tree` / `rag` / `misc` / `handoff` 四个工具全部被模型实际调用成功。
 
 ```sh
-# npm 发布后
+# npm 0.4.0 已发布
 dsh plugin --profile <profile> add ds-saver
 
-# 本地目录（开发 / 未发布）
+# 本地目录（开发）
 dsh plugin --profile <profile> add /path/to/ds-saver
 ```
 

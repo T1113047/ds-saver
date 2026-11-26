@@ -23,7 +23,7 @@
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
-  "files": ["index.js", "dsh", "cordis.patch.yml", "cordis.patch.yml", "README.md", "LICENSE"],
+  "files": ["index.js", "dsh", "cordis.patch.yml", "README.md", "LICENSE"],
   "engines": {
     "node": ">=20",
     "dsh": ">=0.2.2-rc.5 <0.3.0-0"

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0
+
+- 新增一键安装包 `bundle/`：一条命令装 OpenCode 插件 shim、三个通用版 skills、
+  计量/索引工具（`ctx-usage.py`、`index-rebuild.py`、`rag-emb-sync.py`、`rag-refresh.sh`）、
+  RAG 配置模板与 `rag-refresh` 包装器；覆盖前自动备份，不读写密钥。
+- `ctx_status` 不再依赖工作区里的 `ctx-usage.py`：按 `DS_SAVER_CTX_USAGE` → 包内
+  `bundle/tools/` → `~/.local/share/opencode/ds-saver/tools/` → 旧工作区路径 依次查找；
+  缺脚本时返回可操作提示而不是 `spawn ENOENT`。
+- 所有 Python 调用改为 `python3` 优先、`python` 回退（`DS_SAVER_PYTHON` 可覆盖）。
+- `ctx_forecast` / `ctx_calibrate` / `ctx_report` / `ctx-usage.py` 支持
+  `DS_SAVER_OPENCODE_DB` 与 `--db`；数据库不存在时给出明确提示。
+- `index-rebuild.py` / `rag-emb-sync.py` / `rag-refresh.sh` 支持 `DS_SAVER_WORKSPACE`
+  等环境变量，去掉硬编码路径，可在任意工作区使用。
+- 修正缓存成本口径：500K / 650K 按 0.02 元/百万为 0.010 / 0.013 元。
+- DSH 的 `misc` 参数说明改为与实现一致：无 `paths` 时仍可跑只读循环，只能读模型点名的文件。
+
 ## 0.3.0
 
 - `rag` 新增可选 `filter` 模式：先检索候选（最多 12 条，命中行前后各 2 行、约 800 字符/条），

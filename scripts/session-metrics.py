@@ -49,10 +49,16 @@ def main():
     parser.add_argument("--session", required=True)
     parser.add_argument(
         "--db",
-        default=os.path.expanduser("~/.local/share/opencode/opencode.db"),
+        default=os.environ.get("DS_SAVER_OPENCODE_DB")
+        or os.path.expanduser("~/.local/share/opencode/opencode.db"),
     )
     args = parser.parse_args()
 
+    if not os.path.exists(args.db):
+        raise SystemExit(
+            f"找不到 OpenCode 会话库：{args.db}。"
+            "这四个计量工具只支持 OpenCode；可用 --db 或 DS_SAVER_OPENCODE_DB 指定。"
+        )
     con = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
     rows = con.execute(
         "select data from session_message "

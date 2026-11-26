@@ -85,7 +85,8 @@ def main():
     )
     parser.add_argument(
         "--db",
-        default=os.path.expanduser("~/.local/share/opencode/opencode.db"),
+        default=os.environ.get("DS_SAVER_OPENCODE_DB")
+        or os.path.expanduser("~/.local/share/opencode/opencode.db"),
     )
     args = parser.parse_args()
 

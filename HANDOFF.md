@@ -6,9 +6,9 @@
 
 ## 1. 一句话状态
 
-OpenCode 端与 DSH 端都已完成实机验证；`0.3.0` 源码已推送到 GitHub `main`；npm 发布**被账号临时安全暂停卡住**（不是包本身的问题）。
+OpenCode 端与 DSH 端都已完成实机验证；`0.3.0` 源码已在 GitHub `main`，本地 `0.4.0` 一键安装包已加入 `bundle/`（未推送、未发布）；npm 发布**被账号临时安全暂停卡住**（不是包本身的问题）。
 
-- GitHub：<https://github.com/T1113047/ds-saver>（`main` = `2412984`，0.3.0）
+- GitHub：<https://github.com/T1113047/ds-saver>（`main` = `4bbb877`，0.3.0；本地 0.4.0 待推）
 - npm：`ds-saver@0.3.0` 已打包（19 files / 58.0 kB），**未发布**
 - 第三方库：仓库已有 `dsh-plugin` topic，DSH Hub 会按 topic 自动同步（待 npm 可装后复核）
 - 本地 tarball：`ds-saver-0.3.0.tgz`（在仓库根目录，已 gitignore）
@@ -104,7 +104,7 @@ DSH 实测细节见 `docs/dsh-verification.md`。关键结果：
 
 ## 8. 后续 TODO
 
-1. 等 npm 临时暂停解除，发布 `0.3.0`（OTP 或 granular token）。
+1. 等 npm 临时暂停解除，发布 `0.4.0`（含一键安装包；OTP 或 granular token）。
 2. 发布后复核 DSH Hub 自动同步结果；必要时手动提交。
 3. 给 DSH 插件补 `locale/en.json`、`locale/zh.json` 与 icon，让插件页显示正确标题/描述（当前用默认图标）。
 4. 视需要把 `rag filter` 的候选上下文抽成可配置项（行数、字符数）。

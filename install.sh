@@ -1,19 +1,6 @@
-#!/bin/sh
-# 把 ds-saver 挂到 OpenCode 的插件目录（只建 shim，不改其它配置）
-set -eu
-
-SRC="$(cd "$(dirname "$0")" && pwd)"
-DST="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/plugins/ds-saver"
-
-if [ ! -f "$SRC/index.js" ]; then
-  echo "找不到 $SRC/index.js" >&2
-  exit 1
-fi
-
-mkdir -p "$DST"
-cat > "$DST/index.js" <<EOF
-export { default } from "$SRC/index.js";
-EOF
-
-echo "installed: $DST/index.js -> $SRC/index.js"
-echo "OpenCode 会自动热重载插件；若不生效，执行 opencode service restart"
+#!/usr/bin/env bash
+# 兼容入口：默认走一键安装（插件 + skills + 工具 + RAG 模板）
+# 只装插件：./install.sh --plugin-only
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec bash "$DIR/bundle/install.sh" "$@"

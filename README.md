@@ -7,7 +7,7 @@ OpenCode 2.4.x 与 DeepSeek Harness (DSH) 的上下文/杂活插件，针对 Dee
 | 工具 | 作用 |
 |---|---|
 | `misc` | 用便宜官方模型筛选工具输出/日志/文档，只把短结论传回主模型；`agent` 模式最多 3 轮只读文件 |
-| `ctx_status` | 只读查看当前会话上下文、缓存命中、成本（调用本机 `ctx-usage.py`） |
+| `ctx_status` | 只读查看当前会话上下文、缓存命中、成本（调用 `ctx-usage.py`，一键包装到 `~/.local/share/opencode/ds-saver/tools/`） |
 | `ctx_forecast` | 预测下一次重开首轮注入、当前任务截至 token、剩余轮次区间与 handoff 回本 |
 | `ctx_calibrate` | 预测偏差 > 阈值时，重算 growth/base 范围，写校准交接文档；Qwen3.8 Flash 可选 |
 | `ctx_report` | 采集一条匿名会话指标到本地 `metrics.jsonl`，用于真实数据反馈与阈值校准 |
@@ -77,13 +77,19 @@ export DASHSCOPE_API_KEY=...
 
 ## 安装
 
-### OpenCode
+### 一键安装（推荐）
 
 ```sh
 git clone https://github.com/T1113047/ds-saver.git
 cd ds-saver
-./install.sh
+DS_SAVER_WORKSPACE=/path/to/your/workspace ./install.sh
 ```
+
+一次装好：OpenCode 插件 + 三个 skills（`local-index-rag` / `opencode-rag` / `make-decision`）+ 计量与索引工具 + RAG 配置模板。安装器只写模板，不读写密钥，覆盖前自动备份。
+
+只想要插件 shim：`./install.sh --plugin-only`。完整说明见 [`bundle/README.md`](bundle/README.md)。
+
+### OpenCode 手动加载
 
 或在 `opencode.json(c)` 里直接加载本地目录 / npm 包：
 
@@ -156,7 +162,7 @@ rag(query="重试逻辑在哪", path="src", filter=true, filter_topK=5, model="h
 - 首请求 prompt（system + tools + skills + 首条消息）：**5.4K（p50）/ 10K（p90）**
 - 其中 **98% 命中跨会话共享缓存**；未命中仅 **1.2K（p50）/ 5K（p90）**
 - 加 handoff + 任务数据 1–5K 后：热启动约 **0.003–0.013 元**，冷启动约 **0.008–0.018 元**
-- 对比 500K 旧上下文每轮约 0.011 元：一次 handoff 约 **1–3 轮回本**
+- 对比 500K 旧上下文每轮约 0.010 元：一次 handoff 约 **1–3 轮回本**
 - 改 `AGENTS.md` / skills / 工具定义会让共享前缀失效，按冷启动算
 
 详细表格见 `docs/deepseek-context-data.md` §6。

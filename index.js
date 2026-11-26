@@ -27,6 +27,27 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
+/** python3 优先，只有 python 的机器回退；结果缓存，避免每次调用都探测 */
+let pythonCommandPromise;
+async function pythonCommand() {
+  if (!pythonCommandPromise) {
+    pythonCommandPromise = (async () => {
+      const explicit = envFirst("PYTHON");
+      const candidates = explicit ? [explicit] : ["python3", "python"];
+      for (const candidate of candidates) {
+        try {
+          await execFileAsync(candidate, ["--version"], { timeout: 5000 });
+          return candidate;
+        } catch {
+          // 试下一个
+        }
+      }
+      return candidates[0];
+    })();
+  }
+  return pythonCommandPromise;
+}
+
 const PLUGIN_ID = "ds-saver";
 const PLUGIN_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,15 +62,6 @@ function envFirst(name) {
 
 const WORKSPACE = envFirst("WORKSPACE") || process.cwd();
 const HANDOFF_DIR = envFirst("HANDOFF_DIR") || path.join(WORKSPACE, ".handoff");
-const CTX_USAGE_SCRIPT =
-  envFirst("CTX_USAGE") ||
-  path.join(WORKSPACE, "本地索引/99-工具/ctx-usage.py");
-const SESSION_METRICS_SCRIPT =
-  envFirst("SESSION_METRICS") ||
-  path.join(PLUGIN_DIR, "scripts/session-metrics.py");
-const SESSION_FORECAST_SCRIPT =
-  envFirst("SESSION_FORECAST") ||
-  path.join(PLUGIN_DIR, "scripts/session-forecast.py");
 
 /** 数据目录：新目录存在则用新目录；否则旧目录有数据时回退旧目录 */
 const DATA_ROOT_NEW = path.join(os.homedir(), ".local/share/opencode/ds-saver");
@@ -58,6 +70,27 @@ const DATA_ROOT =
   existsSync(DATA_ROOT_NEW) || !existsSync(DATA_ROOT_OLD)
     ? DATA_ROOT_NEW
     : DATA_ROOT_OLD;
+
+function firstExisting(candidates) {
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
+}
+
+const CTX_USAGE_SCRIPT =
+  envFirst("CTX_USAGE") ||
+  firstExisting([
+    path.join(PLUGIN_DIR, "bundle/tools/ctx-usage.py"),
+    path.join(DATA_ROOT, "tools/ctx-usage.py"),
+    path.join(WORKSPACE, "本地索引/99-工具/ctx-usage.py"),
+  ]);
+const SESSION_METRICS_SCRIPT =
+  envFirst("SESSION_METRICS") ||
+  path.join(PLUGIN_DIR, "scripts/session-metrics.py");
+const SESSION_FORECAST_SCRIPT =
+  envFirst("SESSION_FORECAST") ||
+  path.join(PLUGIN_DIR, "scripts/session-forecast.py");
 
 const METRICS_FILE =
   envFirst("METRICS_FILE") || path.join(DATA_ROOT, "metrics.jsonl");
@@ -577,7 +610,7 @@ function statusTool() {
   return {
     name: "ctx_status",
     description:
-      "只读查看当前会话上下文占用、缓存命中与成本（调用本机 ctx-usage.py）。" +
+      "只读查看当前会话上下文占用、缓存命中与成本（调用随包安装的 ctx-usage.py）。" +
       "在准备接新任务或考虑交接换窗前使用。",
     input: {
       type: "object",
@@ -586,9 +619,17 @@ function statusTool() {
     },
     options: { codemode: false },
     async execute(_input, toolCtx) {
+      if (!existsSync(CTX_USAGE_SCRIPT)) {
+        return {
+          content:
+            `ctx_status 找不到 ctx-usage.py：${CTX_USAGE_SCRIPT}\n` +
+            "运行 bundle/install.sh 安装内置脚本，或设置 DS_SAVER_CTX_USAGE 指向它。",
+          metadata: { sessionID: toolCtx.sessionID, script: CTX_USAGE_SCRIPT },
+        };
+      }
       try {
         const { stdout, stderr } = await execFileAsync(
-          "python3",
+          await pythonCommand(),
           [CTX_USAGE_SCRIPT, toolCtx.sessionID, "--json"],
           { timeout: 15000, maxBuffer: 1024 * 1024 },
         );
@@ -609,7 +650,7 @@ function statusTool() {
 
 async function collectMetrics(sessionID) {
   const { stdout } = await execFileAsync(
-    "python3",
+    await pythonCommand(),
     [SESSION_METRICS_SCRIPT, "--session", sessionID],
     { timeout: 15000, maxBuffer: 1024 * 1024 },
   );
@@ -640,7 +681,7 @@ async function runForecastScript(sessionID, opts = {}) {
   if (opts.target !== undefined) {
     args.push("--target", String(clampInt(opts.target, 100000, 900000, 500000)));
   }
-  const { stdout } = await execFileAsync("python3", args, {
+  const { stdout } = await execFileAsync(await pythonCommand(), args, {
     timeout: 15000,
     maxBuffer: 1024 * 1024,
   });

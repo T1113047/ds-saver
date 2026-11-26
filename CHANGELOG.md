@@ -13,6 +13,17 @@
   `DS_SAVER_OPENCODE_DB` 与 `--db`；数据库不存在时给出明确提示。
 - `index-rebuild.py` / `rag-emb-sync.py` / `rag-refresh.sh` 支持 `DS_SAVER_WORKSPACE`
   等环境变量，去掉硬编码路径，可在任意工作区使用。
+- 安装器把插件运行所需的 `index.js`、`scripts/`、`bundle/tools/` 复制到
+  `plugins/ds-saver/pkg/`，装完不再依赖 clone 目录；`--link` 保留开发时的仓库直连。
+- 示例配置的 `apiKey` 改为空串，并在 `apiKeyFor` 中忽略 `<...>` 占位符，避免占位符
+  挡住环境变量、导致必然 401。
+- 配置目录与数据目录支持 `XDG_CONFIG_HOME` / `XDG_DATA_HOME`；`--prefix` / `--data`
+  非默认时安装器会提示。
+- 安装器补齐参数缺值、相对路径归一化、危险字符检查（`"` / `$` / 反引号）。
+- `rag-refresh.sh` 的 Python 解释器改为 `python3` → `python` 回退；`opencode-rag status`
+  字段不匹配时不再因 pipefail 中断，改为打印原始尾部并提示版本。
+- README 的工作区 RAG 示例改为正确的 `openCode` 段（`readOverride` /
+  `injectSystemPrompt` / `autoIndex`），避免顶层键被忽略。
 - 修正缓存成本口径：500K / 650K 按 0.02 元/百万为 0.010 / 0.013 元。
 - DSH 的 `misc` 参数说明改为与实现一致：无 `paths` 时仍可跑只读循环，只能读模型点名的文件。
 

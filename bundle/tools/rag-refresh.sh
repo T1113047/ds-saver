@@ -20,9 +20,9 @@ set -euo pipefail
 
 WS="${DS_SAVER_WORKSPACE:-$(pwd)}"
 TOOLS="${DS_SAVER_TOOLS:-$WS/本地索引/99-工具}"
-STORE="${DS_SAVER_RAG_STORE:-$HOME/.local/share/opencode-rag/local-index}"
+STORE="${DS_SAVER_RAG_STORE:-${XDG_DATA_HOME:-$HOME/.local/share}/opencode-rag/local-index}"
 RAG_BIN="${DS_SAVER_RAG_BIN:-$(command -v opencode-rag || true)}"
-PYTHON="${DS_SAVER_PYTHON:-python3}"
+PYTHON="${DS_SAVER_PYTHON:-$(command -v python3 || command -v python || echo python3)}"
 
 usage() {
   cat >&2 <<'EOF'
@@ -35,13 +35,25 @@ EOF
   exit "${1:-2}"
 }
 
+show_status() {
+  local out filtered
+  out="$("$RAG_BIN" status 2>&1 || true)"
+  filtered="$(printf '%s\n' "$out" | sed -n '/^Store path:/,$p' | grep -E 'Store path|Manifest entries|Last indexed|Up-to-date|Pending|Indexed chunks|Expected chunks|Orphan chunks' || true)"
+  if [ -n "$filtered" ]; then
+    printf '%s\n' "$filtered"
+  else
+    printf '%s\n' "$out" | tail -20
+    echo "提示：未匹配到预期 status 字段，可能是 opencode-rag 版本不同（本包按 2.13.8 验证）。" >&2
+  fi
+}
+
 mode="${1:-refresh}"
 case "$mode" in -h|--help|help) usage 0 ;; esac
 
 [[ -d "$WS" ]] || { echo "错误：工作区不存在 $WS（设置 DS_SAVER_WORKSPACE）" >&2; exit 2; }
 [[ -f "$TOOLS/rag-emb-sync.py" ]] || { echo "错误：找不到 $TOOLS/rag-emb-sync.py" >&2; exit 2; }
 if [[ "$mode" != "--sync" && "$mode" != "sync" ]]; then
-  [[ -n "$RAG_BIN" && -x "$RAG_BIN" ]] || { echo "错误：找不到 opencode-rag（设置 DS_SAVER_RAG_BIN 或 npm i -g opencode-rag-plugin）" >&2; exit 2; }
+  [[ -n "$RAG_BIN" && -x "$RAG_BIN" ]] || { echo "错误：找不到 opencode-rag（设置 DS_SAVER_RAG_BIN 或 npm i -g opencode-rag-plugin@2.13.8）" >&2; exit 2; }
 fi
 
 # includeDirs 依赖 cwd，必须先切到工作区根
@@ -51,7 +63,7 @@ case "$mode" in
   --check|check)
     "$PYTHON" "$TOOLS/rag-emb-sync.py" --check
     "$PYTHON" "$TOOLS/rag-emb-sync.py" --check-sync
-    "$RAG_BIN" status | sed -n '/^Store path:/,$p' | grep -E 'Store path|Manifest entries|Last indexed|Up-to-date|Pending|Indexed chunks|Expected chunks|Orphan chunks'
+    show_status
     ;;
   --sync|sync)
     "$PYTHON" "$TOOLS/rag-emb-sync.py"
@@ -59,16 +71,13 @@ case "$mode" in
   refresh|"")
     "$PYTHON" "$TOOLS/rag-emb-sync.py"
     "$RAG_BIN" index
-    "$RAG_BIN" status | sed -n '/^Store path:/,$p' | grep -E 'Store path|Manifest entries|Last indexed|Up-to-date|Pending|Indexed chunks|Expected chunks|Orphan chunks'
+    show_status
     entries="$("$PYTHON" -c 'import json,sys;print(len(json.load(open(sys.argv[1]))["files"]))' "$STORE/manifest.json")"
     if [[ "$entries" -lt 1 ]]; then
       echo "错误：索引条目为 $entries，扫描范围可能错误；请检查 cwd 与 includeDirs。" >&2
       exit 1
     fi
     echo "完成：manifest ${entries} 条。"
-    ;;
-  -h|--help|help)
-    usage
     ;;
   *)
     usage

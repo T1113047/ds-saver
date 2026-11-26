@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 _HOME = Path.home()
-DB = Path(os.environ.get("DS_SAVER_OPENCODE_DB") or _HOME / ".local/share/opencode/opencode.db")
+DB = Path(os.environ.get("DS_SAVER_OPENCODE_DB") or os.environ.get("CTX_MEMORY_OPENCODE_DB") or _HOME / ".local/share/opencode/opencode.db")
 MODELS = Path(os.environ.get("DS_SAVER_MODELS_JSON") or _HOME / ".cache/opencode/models.json")
 CONFIG = Path(os.environ.get("DS_SAVER_OPENCODE_CONFIG") or _HOME / ".config/opencode/opencode.jsonc")
 

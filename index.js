@@ -27,7 +27,7 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-/** python3 优先，只有 python 的机器回退；结果缓存，避免每次调用都探测 */
+/** python 解释器：优先 python3，回退 python；脚本用到 3.9+ 特性，探测时校验版本 */
 let pythonCommandPromise;
 async function pythonCommand() {
   if (!pythonCommandPromise) {
@@ -36,16 +36,30 @@ async function pythonCommand() {
       const candidates = explicit ? [explicit] : ["python3", "python"];
       for (const candidate of candidates) {
         try {
-          await execFileAsync(candidate, ["--version"], { timeout: 5000 });
+          await execFileAsync(
+            candidate,
+            [
+              "-c",
+              "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)",
+            ],
+            { timeout: 5000 },
+          );
           return candidate;
         } catch {
-          // 试下一个
+          // 不存在或版本过低，试下一个
         }
       }
-      return candidates[0];
+      return "";
     })();
   }
-  return pythonCommandPromise;
+  const found = await pythonCommandPromise;
+  if (!found) {
+    pythonCommandPromise = undefined; // 允许装好 Python 后不重启重试
+    throw new Error(
+      "未找到 Python 3.9+；请安装后重试，或设置 DS_SAVER_PYTHON 指向解释器",
+    );
+  }
+  return found;
 }
 
 const PLUGIN_ID = "ds-saver";
@@ -63,9 +77,11 @@ function envFirst(name) {
 const WORKSPACE = envFirst("WORKSPACE") || process.cwd();
 const HANDOFF_DIR = envFirst("HANDOFF_DIR") || path.join(WORKSPACE, ".handoff");
 
-/** 数据目录：新目录存在则用新目录；否则旧目录有数据时回退旧目录 */
-const DATA_ROOT_NEW = path.join(os.homedir(), ".local/share/opencode/ds-saver");
-const DATA_ROOT_OLD = path.join(os.homedir(), ".local/share/opencode/ctx-memory");
+/** 数据目录：尊重 XDG_DATA_HOME；新目录存在则用新目录，否则旧目录有数据时回退 */
+const DATA_HOME =
+  process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
+const DATA_ROOT_NEW = path.join(DATA_HOME, "opencode/ds-saver");
+const DATA_ROOT_OLD = path.join(DATA_HOME, "opencode/ctx-memory");
 const DATA_ROOT =
   existsSync(DATA_ROOT_NEW) || !existsSync(DATA_ROOT_OLD)
     ? DATA_ROOT_NEW
@@ -78,19 +94,42 @@ function firstExisting(candidates) {
   return candidates[0];
 }
 
-const CTX_USAGE_SCRIPT =
-  envFirst("CTX_USAGE") ||
-  firstExisting([
+const SCRIPT_ENV = {
+  "ctx-usage.py": "CTX_USAGE",
+  "session-metrics.py": "SESSION_METRICS",
+  "session-forecast.py": "SESSION_FORECAST",
+};
+const SCRIPT_CANDIDATES = {
+  "ctx-usage.py": () => [
     path.join(PLUGIN_DIR, "bundle/tools/ctx-usage.py"),
     path.join(DATA_ROOT, "tools/ctx-usage.py"),
     path.join(WORKSPACE, "本地索引/99-工具/ctx-usage.py"),
-  ]);
-const SESSION_METRICS_SCRIPT =
-  envFirst("SESSION_METRICS") ||
-  path.join(PLUGIN_DIR, "scripts/session-metrics.py");
-const SESSION_FORECAST_SCRIPT =
-  envFirst("SESSION_FORECAST") ||
-  path.join(PLUGIN_DIR, "scripts/session-forecast.py");
+  ],
+  "session-metrics.py": () => [
+    path.join(PLUGIN_DIR, "scripts/session-metrics.py"),
+    path.join(DATA_ROOT, "tools/session-metrics.py"),
+  ],
+  "session-forecast.py": () => [
+    path.join(PLUGIN_DIR, "scripts/session-forecast.py"),
+    path.join(DATA_ROOT, "tools/session-forecast.py"),
+  ],
+};
+const scriptCache = new Map();
+
+function scriptCandidates(name) {
+  const envValue = envFirst(SCRIPT_ENV[name]);
+  const list = SCRIPT_CANDIDATES[name]();
+  return envValue ? [envValue, ...list] : list;
+}
+
+/** 惰性解析：用户装完 bundle 后不用重启；缓存命中失效时重扫 */
+function toolScript(name) {
+  const cached = scriptCache.get(name);
+  if (cached && existsSync(cached)) return cached;
+  const resolved = firstExisting(scriptCandidates(name));
+  scriptCache.set(name, resolved);
+  return resolved;
+}
 
 const METRICS_FILE =
   envFirst("METRICS_FILE") || path.join(DATA_ROOT, "metrics.jsonl");
@@ -102,8 +141,10 @@ const LAST_FORECAST_FILE =
   envFirst("LAST_FORECAST") || path.join(DATA_ROOT, "last-forecast.json");
 
 /** 配置：新文件不存在但旧文件存在时，继续读旧配置 */
-const CONFIG_PATH_NEW = path.join(os.homedir(), ".config/opencode/ds-saver.json");
-const CONFIG_PATH_OLD = path.join(os.homedir(), ".config/opencode/ctx-memory.json");
+const CONFIG_HOME =
+  process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
+const CONFIG_PATH_NEW = path.join(CONFIG_HOME, "opencode/ds-saver.json");
+const CONFIG_PATH_OLD = path.join(CONFIG_HOME, "opencode/ctx-memory.json");
 const CONFIG_PATH =
   envFirst("CONFIG") ||
   (!existsSync(CONFIG_PATH_NEW) && existsSync(CONFIG_PATH_OLD)
@@ -453,11 +494,17 @@ function resolveTargets(config, requested) {
   throw new Error(`未知模型 "${key}"；可用：${names}，或 provider/model`);
 }
 
+function usableKey(value) {
+  const key = String(value || "").trim();
+  // 示例配置里的 <PLACEHOLDER> 不能当成真 key，否则会挡住环境变量
+  return !key || /^<.*>$/.test(key) ? "" : key;
+}
+
 function apiKeyFor(provider, name) {
   return (
-    provider.apiKey ||
-    (provider.apiKeyEnv ? process.env[provider.apiKeyEnv] : "") ||
-    envFirst(`${name.toUpperCase()}_KEY`) ||
+    usableKey(provider.apiKey) ||
+    (provider.apiKeyEnv ? usableKey(process.env[provider.apiKeyEnv]) : "") ||
+    usableKey(envFirst(`${name.toUpperCase()}_KEY`)) ||
     ""
   );
 }
@@ -619,24 +666,28 @@ function statusTool() {
     },
     options: { codemode: false },
     async execute(_input, toolCtx) {
-      if (!existsSync(CTX_USAGE_SCRIPT)) {
+      const script = toolScript("ctx-usage.py");
+      if (!existsSync(script)) {
         return {
           content:
-            `ctx_status 找不到 ctx-usage.py：${CTX_USAGE_SCRIPT}\n` +
-            "运行 bundle/install.sh 安装内置脚本，或设置 DS_SAVER_CTX_USAGE 指向它。",
-          metadata: { sessionID: toolCtx.sessionID, script: CTX_USAGE_SCRIPT },
+            "ctx_status 找不到 ctx-usage.py。已尝试：\n" +
+            scriptCandidates("ctx-usage.py").map((p) => `  - ${p}`).join("\n") +
+            "\n运行 bundle/install.sh 安装内置脚本，或设置 DS_SAVER_CTX_USAGE（兼容 CTX_MEMORY_CTX_USAGE）指向它。",
+          metadata: { sessionID: toolCtx.sessionID, script },
         };
       }
       try {
-        const { stdout, stderr } = await execFileAsync(
-          await pythonCommand(),
-          [CTX_USAGE_SCRIPT, toolCtx.sessionID, "--json"],
-          { timeout: 15000, maxBuffer: 1024 * 1024 },
-        );
+        const args = [script, toolCtx.sessionID, "--json"];
+        const db = envFirst("OPENCODE_DB");
+        if (db) args.push("--db", db);
+        const { stdout, stderr } = await execFileAsync(await pythonCommand(), args, {
+          timeout: 15000,
+          maxBuffer: 1024 * 1024,
+        });
         const text = (stdout || stderr || "").trim();
         return {
           content: text || "(ctx-usage 无输出)",
-          metadata: { sessionID: toolCtx.sessionID, script: CTX_USAGE_SCRIPT },
+          metadata: { sessionID: toolCtx.sessionID, script },
         };
       } catch (err) {
         return {
@@ -649,11 +700,19 @@ function statusTool() {
 }
 
 async function collectMetrics(sessionID) {
-  const { stdout } = await execFileAsync(
-    await pythonCommand(),
-    [SESSION_METRICS_SCRIPT, "--session", sessionID],
-    { timeout: 15000, maxBuffer: 1024 * 1024 },
-  );
+  const script = toolScript("session-metrics.py");
+  if (!existsSync(script)) {
+    throw new Error(
+      `找不到 session-metrics.py：${script}；运行 bundle/install.sh 或设置 DS_SAVER_SESSION_METRICS`,
+    );
+  }
+  const args = [script, "--session", sessionID];
+  const db = envFirst("OPENCODE_DB");
+  if (db) args.push("--db", db);
+  const { stdout } = await execFileAsync(await pythonCommand(), args, {
+    timeout: 15000,
+    maxBuffer: 1024 * 1024,
+  });
   return JSON.parse(String(stdout || "").trim());
 }
 
@@ -670,7 +729,15 @@ async function appendMetrics(sessionID) {
 }
 
 async function runForecastScript(sessionID, opts = {}) {
-  const args = [SESSION_FORECAST_SCRIPT, "--session", sessionID];
+  const script = toolScript("session-forecast.py");
+  if (!existsSync(script)) {
+    throw new Error(
+      `找不到 session-forecast.py：${script}；运行 bundle/install.sh 或设置 DS_SAVER_SESSION_FORECAST`,
+    );
+  }
+  const args = [script, "--session", sessionID];
+  const db = envFirst("OPENCODE_DB");
+  if (db) args.push("--db", db);
   args.push("--calibration", opts.calibration ?? CALIBRATION_FILE);
   if (opts.handoffChars !== undefined) {
     args.push("--handoff-chars", String(clampInt(opts.handoffChars, 0, 20000, 1500)));

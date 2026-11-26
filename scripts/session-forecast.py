@@ -86,6 +86,7 @@ def main():
     parser.add_argument(
         "--db",
         default=os.environ.get("DS_SAVER_OPENCODE_DB")
+        or os.environ.get("CTX_MEMORY_OPENCODE_DB")
         or os.path.expanduser("~/.local/share/opencode/opencode.db"),
     )
     args = parser.parse_args()
@@ -101,6 +102,11 @@ def main():
     mult = float(cal.get("growth_multiplier") or 1.0)
     mult = max(0.5, min(2.0, mult))
 
+    if not os.path.exists(args.db):
+        raise SystemExit(
+            f"找不到 OpenCode 会话库：{args.db}。"
+            "ctx_forecast / ctx_calibrate 只支持 OpenCode；可用 --db 或 DS_SAVER_OPENCODE_DB 指定。"
+        )
     con = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
     rows = con.execute(
         "select data from session_message "

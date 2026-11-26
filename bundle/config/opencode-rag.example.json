@@ -1,11 +1,10 @@
 {
-  "_comment": "复制为 ~/.config/opencode/opencode-rag.json（600），填入 embedding.apiKey。这是全局配置；工作区可再放 .opencode/opencode-rag.json 覆盖索引范围。",
   "embedding": {
     "provider": "openai",
     "baseUrl": "https://api.siliconflow.cn/v1",
     "model": "Qwen/Qwen3-Embedding-4B",
     "vectorDimension": 2560,
-    "apiKey": "<SILICONFLOW_API_KEY>",
+    "apiKey": "",
     "timeoutMs": 30000
   },
   "description": {

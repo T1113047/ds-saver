@@ -12,6 +12,7 @@ DRY=0
 PLUGIN_ONLY=0
 NO_RAG=0
 ASSUME_YES=0
+LINK=0
 TS="$(date +%Y%m%d-%H%M%S)"
 
 usage() {
@@ -21,7 +22,8 @@ usage() {
   --workspace DIR   工作区根（写入 rag-refresh 包装器，默认当前目录）
   --prefix DIR      OpenCode 配置目录（默认 $XDG_CONFIG_HOME/opencode）
   --data DIR        工具与数据目录（默认 $XDG_DATA_HOME/opencode/ds-saver）
-  --plugin-only     只装 OpenCode 插件 shim，不装 skills/工具/RAG
+  --plugin-only     只装 OpenCode 插件（含运行所需副本），不装 skills/工具/RAG
+  --link            开发模式：插件 shim 指向当前仓库，改代码即时生效
   --no-rag          跳过 RAG 组件检测与配置模板
   --yes             允许自动执行 npm i -g（默认只打印命令）
   --dry-run         只打印将要做什么，不写文件
@@ -105,13 +107,14 @@ copy_if_changed() {
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --workspace) WORKSPACE="$2"; shift 2 ;;
-    --workspace=*) WORKSPACE="${1#*=}"; shift ;;
-    --prefix) PREFIX="$2"; shift 2 ;;
-    --prefix=*) PREFIX="${1#*=}"; shift ;;
-    --data) DATA="$2"; shift 2 ;;
-    --data=*) DATA="${1#*=}"; shift ;;
+    --workspace) [ $# -ge 2 ] || die "--workspace 需要目录"; WORKSPACE="$2"; shift 2 ;;
+    --workspace=*) [ -n "${1#*=}" ] || die "--workspace 需要目录"; WORKSPACE="${1#*=}"; shift ;;
+    --prefix) [ $# -ge 2 ] || die "--prefix 需要目录"; PREFIX="$2"; shift 2 ;;
+    --prefix=*) [ -n "${1#*=}" ] || die "--prefix 需要目录"; PREFIX="${1#*=}"; shift ;;
+    --data) [ $# -ge 2 ] || die "--data 需要目录"; DATA="$2"; shift 2 ;;
+    --data=*) [ -n "${1#*=}" ] || die "--data 需要目录"; DATA="${1#*=}"; shift ;;
     --plugin-only) PLUGIN_ONLY=1; shift ;;
+    --link) LINK=1; shift ;;
     --no-rag) NO_RAG=1; shift ;;
     --yes|-y) ASSUME_YES=1; shift ;;
     --dry-run) DRY=1; shift ;;
@@ -120,13 +123,31 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+abspath() {
+  case "$1" in
+    /*) printf '%s' "$1" ;;
+    *) printf '%s/%s' "$PWD" "$1" ;;
+  esac
+}
+WORKSPACE="$(abspath "$WORKSPACE")"
+PREFIX="$(abspath "$PREFIX")"
+DATA="$(abspath "$DATA")"
+[ -d "$WORKSPACE" ] || die "工作区不存在：$WORKSPACE"
+case "$WORKSPACE$DATA" in
+  *'"'*|*'$'*|*'`'*) die '路径不能包含双引号、$ 或反引号（rag-refresh 包装器限制）' ;;
+esac
+
 [ -f "$SRC/index.js" ] || die "找不到 $SRC/index.js，请在解压后的包根目录运行"
 command -v node >/dev/null 2>&1 || die "未找到 node；需要 Node >=20"
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
 [ "$NODE_MAJOR" -ge 20 ] || die "Node $NODE_MAJOR 太旧；需要 >=20"
-command -v python3 >/dev/null 2>&1 || say "提示：未找到 python3。ctx_* 计量工具需要 Python 3；只有 python 时会自动回退。"
+command -v python3 >/dev/null 2>&1 || say "提示：未找到 python3。ctx_* 计量工具需要 Python 3.9+；Debian/Ubuntu 用 apt install python3，macOS 用 brew install python3。"
 
 say "ds-saver $VERSION 一键安装"
+DEFAULT_PREFIX="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
+if [ "$PREFIX" != "$DEFAULT_PREFIX" ]; then
+  say "  注意：使用非默认配置目录；请确保 OpenCode 的 XDG_CONFIG_HOME 与你传入的 --prefix 一致。"
+fi
 say "  包目录   $SRC"
 say "  配置目录 $PREFIX"
 say "  数据目录 $DATA"
@@ -137,9 +158,31 @@ say "  工作区   $WORKSPACE"
 step 1/5 "OpenCode 插件"
 node --check "$SRC/index.js" >/dev/null 2>&1 || die "index.js 语法检查失败"
 [ -f "$SRC/dsh/index.js" ] && { node --check "$SRC/dsh/index.js" >/dev/null 2>&1 || die "dsh/index.js 语法检查失败"; }
-PLUGIN_DST="$PREFIX/plugins/ds-saver/index.js"
+PLUGIN_ROOT="$PREFIX/plugins/ds-saver"
+PLUGIN_PKG="$PLUGIN_ROOT/pkg"
+PLUGIN_DST="$PLUGIN_ROOT/index.js"
+if [ "$LINK" = 1 ]; then
+  TARGET="$SRC/index.js"
+  say "  模式：link（shim 指向仓库，改代码即时生效）"
+else
+  TARGET="$PLUGIN_PKG/index.js"
+  copy_if_changed "$SRC/index.js" "$PLUGIN_PKG/index.js" 644
+  copy_if_changed "$SRC/package.json" "$PLUGIN_PKG/package.json" 644
+  copy_if_changed "$SRC/cordis.patch.yml" "$PLUGIN_PKG/cordis.patch.yml" 644
+  copy_if_changed "$SRC/dsh/index.js" "$PLUGIN_PKG/dsh/index.js" 644
+  for f in "$SRC"/scripts/*.py; do
+    [ -f "$f" ] || continue
+    copy_if_changed "$f" "$PLUGIN_PKG/scripts/$(basename "$f")" 644
+  done
+  for f in "$SRC"/bundle/tools/*; do
+    [ -f "$f" ] || continue
+    mode=644
+    case "$f" in *.sh) mode=755 ;; esac
+    copy_if_changed "$f" "$PLUGIN_PKG/bundle/tools/$(basename "$f")" "$mode"
+  done
+fi
 SHIM="$(mktemp)"
-printf 'export { default } from "%s";\n' "$SRC/index.js" > "$SHIM"
+printf 'export { default } from "%s";\n' "$TARGET" > "$SHIM"
 if [ -f "$PLUGIN_DST" ] && cmp -s "$SHIM" "$PLUGIN_DST"; then
   say "  已是最新 $PLUGIN_DST"
 else
@@ -171,6 +214,9 @@ RAG_BIN="$(detect_rag || true)"
 step 3/5 "工具脚本"
 for f in ctx-usage.py index-rebuild.py rag-emb-sync.py; do
   copy_if_changed "$SRC/bundle/tools/$f" "$DATA/tools/$f" 644
+done
+for f in session-metrics.py session-forecast.py; do
+  copy_if_changed "$SRC/scripts/$f" "$DATA/tools/$f" 644
 done
 copy_if_changed "$SRC/bundle/tools/rag-refresh.sh" "$DATA/tools/rag-refresh.sh" 755
 
@@ -216,7 +262,9 @@ say "  1) 便宜模型（misc / rag filter）："
 say "     cp $PREFIX/ds-saver.example.json $PREFIX/ds-saver.json 并填 apiKey"
 say "  2) 验证插件：新开 OpenCode 会话，问一句“用 tree 看下当前目录”"
 say "  3) 建索引：$DATA/bin/rag-refresh"
-say "  4) DSH：dsh plugin --profile <profile> add $SRC"
+DSH_PKG="$PLUGIN_PKG"
+[ "$LINK" = 1 ] && DSH_PKG="$SRC"
+say "  4) DSH：dsh plugin --profile <profile> add $DSH_PKG"
 say "  5) 完整说明：$SRC/bundle/README.md"
 say ""
 say "回滚：所有被覆盖的文件都保留为 <原文件>.bak.$TS"

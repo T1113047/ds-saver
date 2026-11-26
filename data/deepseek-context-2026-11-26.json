@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "generated_at": "2026-11-26",
+  "snapshot_note": "Counts are a 2026-11-26 snapshot; rerunning the script on a live DB changes them slightly.",
+  "source": "OpenCode 2.4.1 local DB, aggregated; no prompts, message text, paths, titles, IPs or keys",
+  "model": "deepseek/deepseek-flash",
+  "model_alias": "DeepSeek V4.1 Flash 1017",
+  "window": 1048576,
+  "coverage": {
+    "assistant_messages": 18471,
+    "long_sessions": 67,
+    "composition_sessions": 22
+  },
+  "filters": {
+    "long_session": "total assistant messages >= 50 and deepseek share >= 0.8",
+    "context": "tokens.input + tokens.cache.read + tokens.cache.write",
+    "reasoning": "tokens.reasoning",
+    "tool_error": "assistant content part type=tool and state.status=error"
+  },
+  "composition_bytes_pct": {
+    "tool": { "p25": 62.5, "p50": 66.2, "p75": 76.8 },
+    "reasoning": { "p25": 22.6, "p50": 33.0, "p75": 36.6 },
+    "text": { "p25": 0.6, "p50": 0.8, "p75": 1.0 }
+  },
+  "context_per_reasoning": {
+    "p25": 3.09,
+    "p50": 3.46,
+    "p75": 4.79,
+    "reasoning_share_p50": 28.9
+  },
+  "bins": [
+    { "ctx_min": 0, "ctx_max": 50000, "n": 1566, "tool_error_pct": 0.3, "assistant_error_pct": 0.1, "retry_pct": 0.0, "output_med": 156, "reasoning_med": 94, "duration_med_ms": 2597, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0008, "cache_hit_pct": 91.2 },
+    { "ctx_min": 50000, "ctx_max": 100000, "n": 2170, "tool_error_pct": 0.4, "assistant_error_pct": 0.1, "retry_pct": 0.0, "output_med": 178, "reasoning_med": 178, "duration_med_ms": 3700, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0010, "cache_hit_pct": 97.8 },
+    { "ctx_min": 100000, "ctx_max": 150000, "n": 2216, "tool_error_pct": 0.4, "assistant_error_pct": 0.0, "retry_pct": 0.0, "output_med": 175, "reasoning_med": 183, "duration_med_ms": 4055, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0011, "cache_hit_pct": 98.9 },
+    { "ctx_min": 150000, "ctx_max": 200000, "n": 1801, "tool_error_pct": 0.7, "assistant_error_pct": 0.1, "retry_pct": 0.0, "output_med": 174, "reasoning_med": 170, "duration_med_ms": 4272, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0015, "cache_hit_pct": 98.4 },
+    { "ctx_min": 200000, "ctx_max": 250000, "n": 1600, "tool_error_pct": 0.1, "assistant_error_pct": 0.0, "retry_pct": 0.0, "output_med": 200, "reasoning_med": 150, "duration_med_ms": 4358, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0016, "cache_hit_pct": 98.7 },
+    { "ctx_min": 250000, "ctx_max": 300000, "n": 1341, "tool_error_pct": 0.4, "assistant_error_pct": 0.1, "retry_pct": 0.0, "output_med": 182, "reasoning_med": 132, "duration_med_ms": 4368, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0017, "cache_hit_pct": 98.9 },
+    { "ctx_min": 300000, "ctx_max": 400000, "n": 2241, "tool_error_pct": 0.4, "assistant_error_pct": 0.1, "retry_pct": 0.0, "output_med": 206, "reasoning_med": 135, "duration_med_ms": 5376, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0019, "cache_hit_pct": 99.3 },
+    { "ctx_min": 400000, "ctx_max": 500000, "n": 1899, "tool_error_pct": 0.3, "assistant_error_pct": 0.1, "retry_pct": 0.0, "output_med": 236, "reasoning_med": 157, "duration_med_ms": 6254, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0026, "cache_hit_pct": 98.8 },
+    { "ctx_min": 500000, "ctx_max": 600000, "n": 1337, "tool_error_pct": 0.2, "assistant_error_pct": 0.1, "retry_pct": 0.0, "output_med": 224, "reasoning_med": 187, "duration_med_ms": 6864, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0029, "cache_hit_pct": 99.0 },
+    { "ctx_min": 600000, "ctx_max": 700000, "n": 964, "tool_error_pct": 0.1, "assistant_error_pct": 0.0, "retry_pct": 0.0, "output_med": 242, "reasoning_med": 162, "duration_med_ms": 6872, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0033, "cache_hit_pct": 99.2 },
+    { "ctx_min": 700000, "ctx_max": 800000, "n": 742, "tool_error_pct": 0.0, "assistant_error_pct": 0.0, "retry_pct": 0.0, "output_med": 268, "reasoning_med": 154, "duration_med_ms": 6974, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0044, "cache_hit_pct": 98.6 },
+    { "ctx_min": 800000, "ctx_max": 1200000, "n": 594, "tool_error_pct": 0.0, "assistant_error_pct": 0.2, "retry_pct": 0.0, "output_med": 282, "reasoning_med": 118, "duration_med_ms": 6894, "finish_length_pct": 0.0, "cost_per_msg_usd": 0.0073, "cache_hit_pct": 96.6 }
+  ],
+  "early_vs_late": {
+    "tool_error_pct": { "early": 0.0, "late": 0.0, "paired_median_delta": 0.0 },
+    "assistant_error_pct": { "early": 0.0, "late": 0.0, "paired_median_delta": 0.0 },
+    "output_med": { "early": 182, "late": 201, "paired_median_delta": 9 },
+    "reasoning_med": { "early": 137, "late": 215, "paired_median_delta": 37 },
+    "duration_med_ms": { "early": 3817.5, "late": 5082, "paired_median_delta": 643.5 },
+    "tools_per_msg": { "early": 1.24, "late": 1.056, "paired_median_delta": -0.097 }
+  },
+  "final_context": {
+    "p50": 246667,
+    "p75": 480422,
+    "p90": 709505,
+    "p95": 787160,
+    "thresholds": {
+      "300000": { "count": 29, "pct": 43.3 },
+      "400000": { "count": 20, "pct": 29.9 },
+      "500000": { "count": 16, "pct": 23.9 },
+      "600000": { "count": 9, "pct": 13.4 },
+      "700000": { "count": 7, "pct": 10.4 },
+      "800000": { "count": 3, "pct": 4.5 }
+    }
+  },
+  "policy": {
+    "profile": "deepseek",
+    "soft": 300000,
+    "handoff": 500000,
+    "hard": 650000,
+    "absolute_max": 800000,
+    "cot_diagnostic": {
+      "typical": [3.0, 5.0],
+      "bloat_above": 5.0,
+      "lean_below": 2.0
+    },
+    "default_profile": {
+      "soft_ratio": 0.5,
+      "hard_ratio": 0.6
+    }
+  },
+  "cost_latency": [
+    { "ctx_min": 0, "ctx_max": 50000, "cost_per_msg_usd": 0.0008, "duration_med_ms": 2597, "relative_cost": 1.0 },
+    { "ctx_min": 100000, "ctx_max": 150000, "cost_per_msg_usd": 0.0011, "duration_med_ms": 4055, "relative_cost": 1.4 },
+    { "ctx_min": 300000, "ctx_max": 400000, "cost_per_msg_usd": 0.0019, "duration_med_ms": 5376, "relative_cost": 2.4 },
+    { "ctx_min": 500000, "ctx_max": 600000, "cost_per_msg_usd": 0.0029, "duration_med_ms": 6864, "relative_cost": 3.6 },
+    { "ctx_min": 800000, "ctx_max": 1200000, "cost_per_msg_usd": 0.0073, "duration_med_ms": 6894, "relative_cost": 9.1 }
+  ],
+  "new_session_injection": {
+    "sessions": 100,
+    "cache_hit_pct": 98.0,
+    "note": "first assistant request per DS session: system prompt + tools + skills + first user message",
+    "prompt_tokens": { "p25": 5255, "p50": 5418, "p75": 7442, "p90": 10053 },
+    "cache_read_tokens": { "p25": 2688, "p50": 4224, "p75": 5760, "p90": 7296 },
+    "uncached_input_tokens": { "p25": 256, "p50": 1214, "p75": 3308, "p90": 5013 },
+    "output_tokens": { "p25": 98, "p50": 128, "p75": 159, "p90": 239 },
+    "actual_cost_usd": { "p25": 0.000212, "p50": 0.000334, "p75": 0.00065, "p90": 0.000993 },
+    "cold_cost_usd": { "p25": 0.000872, "p50": 0.000951, "p75": 0.001239, "p90": 0.001752 },
+    "scenarios": [
+      { "added_tokens": 0, "warm_cost_usd": { "p50": 0.000334, "p90": 0.000993 }, "cold_cost_usd": { "p50": 0.000951, "p90": 0.001752 }, "warm_cost_rmb": { "p50": 0.0024, "p90": 0.0072 }, "cold_cost_rmb": { "p50": 0.0068, "p90": 0.0126 } },
+      { "added_tokens": 1000, "warm_cost_usd": { "p50": 0.000472, "p90": 0.001138 }, "cold_cost_usd": { "p50": 0.001101, "p90": 0.001902 }, "warm_cost_rmb": { "p50": 0.0034, "p90": 0.0082 }, "cold_cost_rmb": { "p50": 0.0079, "p90": 0.0137 } },
+      { "added_tokens": 3000, "warm_cost_usd": { "p50": 0.000772, "p90": 0.001438 }, "cold_cost_usd": { "p50": 0.001401, "p90": 0.002202 }, "warm_cost_rmb": { "p50": 0.0056, "p90": 0.0104 }, "cold_cost_rmb": { "p50": 0.0101, "p90": 0.0159 } },
+      { "added_tokens": 5000, "warm_cost_usd": { "p50": 0.001072, "p90": 0.001738 }, "cold_cost_usd": { "p50": 0.001701, "p90": 0.002502 }, "warm_cost_rmb": { "p50": 0.0077, "p90": 0.0125 }, "cold_cost_rmb": { "p50": 0.0122, "p90": 0.0180 } },
+      { "added_tokens": 8000, "warm_cost_usd": { "p50": 0.001522, "p90": 0.002188 }, "cold_cost_usd": { "p50": 0.002151, "p90": 0.002952 }, "warm_cost_rmb": { "p50": 0.0110, "p90": 0.0158 }, "cold_cost_rmb": { "p50": 0.0155, "p90": 0.0213 } }
+    ]
+  },
+  "forecast_model": {
+    "base": {
+      "prompt_p50": 5418,
+      "prompt_p90": 10053,
+      "cache_p50": 4224,
+      "cache_p90": 7296,
+      "uncached_p50": 1214,
+      "uncached_p90": 5013,
+      "output_p50": 128,
+      "output_p90": 239
+    },
+    "prices_rmb_per_million": { "input": 1, "cache": 0.02, "output": 4 },
+    "validation": {
+      "first_request": { "n": 100, "mae_tokens": 435, "mape_pct": 8.5, "range_p25_p90_coverage_pct": 66.0 },
+      "turns_to_300k": { "mae_turns": 23.0, "p90_turns": 99.0, "mape_pct": 37.3, "range_coverage_pct": 50.2 },
+      "turns_to_500k": { "mae_turns": 41.3, "p90_turns": 192.1, "mape_pct": 35.7, "range_coverage_pct": 50.1 },
+      "turns_to_650k": { "mae_turns": 55.1, "p90_turns": 239.9, "mape_pct": 33.1, "range_coverage_pct": 50.9 }
+    },
+    "note": "first-request prediction is reliable (~8.5% MAPE); turns-to-threshold is a rough band, not a promise"
+  }
+}

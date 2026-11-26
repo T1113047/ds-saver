@@ -120,7 +120,7 @@ DSH 需要 `>=0.2.2-rc.5 <0.3.0-0`，实测 0.2.2-rc.5。`tree` / `rag` / `hando
 主模型可这样调用：
 
 ```text
-misc(task="从这份构建日志里找出失败原因", paths=["/root/web/.next/build.log"], max_lines=10)
+misc(task="从这份构建日志里找出失败原因", paths=["logs/build.log"], max_lines=10)
 misc(task="筛选这次 grep 结果里与登录相关的行", material="...", max_lines=20)
 misc(task="读这两个文件，找出配置差异", paths=["a.conf","b.conf"], mode="agent")
 tree(path="src", depth=3, maxEntries=400)

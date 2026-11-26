@@ -48,7 +48,7 @@ dsh: error: [/101] Cannot find package '@deepseek-ai/dsh-tools'
 
 ## 二、根因不是版本，是解析边界
 
-DSH 的运行时解析会覆盖安装目录和 profile 里的 bundle，但**不会替一个 linked 的第三方包解析它的 peerDependencies**。插件代码在 `C:\code\...\ds-saver-repo` 下，Node 从那里往上找 `node_modules`，自然找不到 DSH 安装目录里的 `@deepseek-ai/dsh-tools`。
+DSH 的运行时解析会覆盖安装目录和 profile 里的 bundle，但**不会替一个 linked 的第三方包解析它的 peerDependencies**。插件代码在 `<plugin-dir>` 下，Node 从那里往上找 `node_modules`，自然找不到 DSH 安装目录里的 `@deepseek-ai/dsh-tools`。
 
 这不是 ds-saver 独有的问题。任何第三方 DSH 插件，只要：
 

@@ -108,13 +108,14 @@ rag(query="RAG_FILTER_MAX_CANDIDATES", path=".", topK=10, filter=true, filter_to
 ## 复现脚本（PowerShell 摘要）
 
 ```powershell
-$env:DSH_HOME = 'C:\code\opencode\tmp\dsh-home'
+$env:DSH_HOME = Join-Path $env:TEMP 'dsh-home'
 $env:ELECTRON_RUN_AS_NODE = '1'
-$dsh = 'C:\Program Files\DSH NEXT\resources\app.asar\node_modules\@deepseek-ai\dsh\lib\bin.js'
-$exe = 'C:\Program Files\DSH NEXT\DSH NEXT.exe'
+$dsh = Join-Path $env:DSH_INSTALL_DIR 'node_modules\@deepseek-ai\dsh\lib\bin.js'
+$exe = '<DSH executable>'
+$plugin = '<ds-saver checkout>'
 
 Start-Process $exe -ArgumentList "`"$dsh`" --profile headless-fresh --from-default-profile headless --dump-config" -Wait
-Start-Process $exe -ArgumentList "`"$dsh`" plugin --profile headless-fresh add C:\code\opencode\ds-saver-repo" -Wait
+Start-Process $exe -ArgumentList "`"$dsh`" plugin --profile headless-fresh add $plugin" -Wait
 Start-Process $exe -ArgumentList "`"$dsh`" --profile headless-fresh --dump-config-schema" -Wait
-Start-Process $exe -ArgumentList "`"$dsh`" --profile headless-fresh `"调用 tree 工具...`"" -WorkingDirectory C:\code\opencode\ds-saver-repo -Wait
+Start-Process $exe -ArgumentList "`"$dsh`" --profile headless-fresh `"调用 tree 工具...`"" -WorkingDirectory $plugin -Wait
 ```

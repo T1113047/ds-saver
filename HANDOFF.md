@@ -82,7 +82,7 @@ DSH 实测细节见 `docs/dsh-verification.md`。关键结果：
 403 Your account has been temporarily suspended due to a recent security-sensitive action.
 ```
 
-背景：账号 `t_yh` 原本 `tfa=false`，npm 仍要求 2FA/带 bypass 的 granular token；在网页开启 2FA 后触发临时安全暂停。恢复后二选一：
+背景：npm 在开启 2FA 后触发账号级临时安全暂停（与包内容无关）。恢复后二选一：
 
 1. 用 OTP 发布：`npm publish --access public --otp=<6位>`；
 2. 创建 granular access token（publish + bypass 2FA）后 `NPM_TOKEN=... npm publish --access public`。
@@ -97,7 +97,7 @@ DSH 实测细节见 `docs/dsh-verification.md`。关键结果：
 
 ## 7. 安全
 
-- **本次曾在对话中贴过 GitHub PAT 和 npm 恢复码**：请撤销 PAT、重新生成 npm recovery codes；npm 登录 token 已删/待删。
+- 若凭据曾在聊天、日志或截图中暴露，请撤销并重新生成；不要把 `.npmrc`、API Key 或 recovery codes 贴进 issue/PR。
 - 不要提交 `~/.npmrc`、`~/.config/opencode/ds-saver.json`、`~/.config/opencode/ds-saver.env`。
 - 插件 `tree` / `rag` / `misc` 拒绝 `03-密钥`、`.env*`、`auth.json`、私钥等路径；材料命中密钥模式会中止；`rag filter` 外发前再过一次 `assertNoSecrets`。
 - `ctx_report` 只写本地匿名 JSONL，不自动联网。

@@ -80,7 +80,7 @@ export DASHSCOPE_API_KEY=...
 ### OpenCode
 
 ```sh
-git clone https://github.com/<owner>/ds-saver.git
+git clone https://github.com/T1113047/ds-saver.git
 cd ds-saver
 ./install.sh
 ```
@@ -93,17 +93,27 @@ cd ds-saver
 }
 ```
 
+`install.sh` 会在 `~/.config/opencode/plugins/ds-saver/index.js` 建一个 shim。重启 OpenCode 服务，或新开 `opencode --standalone` 会话后生效。
+
 ### DeepSeek Harness (DSH)
 
+已在 DSH `0.2.2-rc.5` 的**全新 headless profile** 上实测通过：官方 `dsh plugin add` 安装，`tree` / `rag` / `misc` / `handoff` 四个工具全部被模型实际调用成功。
+
 ```sh
-dsh plugin --profile web add ds-saver
+# npm 发布后
+dsh plugin --profile <profile> add ds-saver
+
+# 本地目录（开发 / 未发布）
+dsh plugin --profile <profile> add /path/to/ds-saver
 ```
 
-包内 `cordis.patch.yml` 会加载 `ds-saver/dsh`。DSH 端提供 `misc` / `tree` / `rag` / `handoff`；`ctx_status`、`ctx_forecast`、`ctx_calibrate`、`ctx_report` 依赖 OpenCode 会话数据，DSH 不可用。
+Desktop 版可在 **设置 → 插件** 里添加本地目录或 npm 包；命令行里的 profile 换成你实际使用的 `web` / `headless` / 自定义 profile 名。装完 `/restart`（或重启 Desktop）让新行生效。
 
-DSH 需要 `>=0.2.2-rc.5 <0.3.0-0`；本仓库只在 OpenCode 2.4.1 上实测过，DSH 入口尚未本机实测。
+包内 `cordis.patch.yml` 会以 `ds-saver/dsh` 插入插件行。DSH 端提供 `misc` / `tree` / `rag` / `handoff`；`ctx_status`、`ctx_forecast`、`ctx_calibrate`、`ctx_report` 依赖 OpenCode 会话数据，DSH 不可用。
 
-会在 `~/.config/opencode/plugins/ds-saver/index.js` 建一个 shim。重启 OpenCode 服务，或新开 `opencode --standalone` 会话后生效。
+DSH 端**不 import** `@deepseek-ai/dsh-tools`：第三方插件以 `link:` / 本地目录注入时，Node 不会从 DSH 安装目录解析该 peer（pnpm 会明确警告 linked dependency 不解析 peer）。`dsh/index.js` 内置等价的 `defineDshTool`（参数 DSL → 原始 JSON Schema + 参数校验），因此本地目录、`file:`、npm 三种安装方式都能直接跑。
+
+DSH 需要 `>=0.2.2-rc.5 <0.3.0-0`，实测 0.2.2-rc.5。`tree` / `rag` / `handoff` 不需要密钥；`misc` 仍需配置自己的便宜模型（见上）。完整实测记录见 [`docs/dsh-verification.md`](docs/dsh-verification.md)。
 
 ## 用法
 
@@ -202,6 +212,9 @@ ctx_calibrate(actual_turns=20, actual_context=620000, actual_next_prompt=11200, 
 
 - `docs/deepseek-context-data.md`：18,471 条 DS 消息、67 个长会话的完整测算与插件页文案
 - `docs/calibration-protocol.md`：预测偏差 > 阈值时的 `ctx_calibrate` 协议与交接模板
+- `docs/dsh-adapter.md`：双端入口、参数差异与 `engines.dsh` 约束
+- `docs/dsh-verification.md`：全新 DSH profile 的安装与四工具实测记录
+- `docs/article-dsh-fresh-install.md`：从翻车到修复的完整发布文章
 - `data/deepseek-context-2026-11-26.json`：可公开的聚合数据（无正文/路径/密钥）
 - `scripts/measure-context.py`：复现组成、分桶、前后半段、最终分布
 - `scripts/session-metrics.py`：`ctx_report` 使用的单会话匿名指标

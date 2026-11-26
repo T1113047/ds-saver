@@ -1,6 +1,6 @@
 {
   "name": "ds-saver",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Context and token saver for DeepSeek workflows on OpenCode and DeepSeek Harness (DSH)",
   "type": "module",
   "license": "MIT",

@@ -2,7 +2,7 @@
 # ds-saver 一键安装：插件 + skills + 工具 + RAG 组件（不碰密钥）
 set -euo pipefail
 
-VERSION="0.4.2"
+VERSION="0.4.3"
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 PREFIX="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"

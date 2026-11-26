@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.3
+
+- 新增 GitHub Actions OIDC 自动发布：推送 `v*` tag 时校验版本、跑测试并用 npm Trusted Publishing 发布
+  （`.github/workflows/release.yml`）。
+- 新增 `docs/release-automation.md`，说明 Community Market 的 npm `latest` / `dsh.bundle.patch` 条件与目录同步。
+- 无运行时变更；用于验证 Trusted Publisher 并替代手动 OTP 发布。
+
 ## 0.4.2
 
 - 修复 0.4.0 / 0.4.1 npm 包的 CRLF 行尾：`bundle/install.sh` 在 Linux/macOS 上会报

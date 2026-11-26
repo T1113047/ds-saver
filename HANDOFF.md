@@ -9,8 +9,8 @@
 OpenCode 端与 DSH 端都已完成实机验证；`0.4.1`（含一键安装包 `bundle/`）已推送到 GitHub `main`，并已发布到 npm `latest`。
 
 - GitHub：<https://github.com/T1113047/ds-saver>（`main` = 0.4.1）
-- npm：`ds-saver@0.4.1` 已发布（`latest`）；registry 里另有一个 `0.0.0-stage` 占位版本，未 deprecate（需 OTP，不影响 `npm install ds-saver`）
-- 第三方库：仓库已有 `dsh-plugin` topic，DSH Hub 会按 topic 自动同步；awesome-deepseek-harness-plugins 已收录（PR #1124）
+- npm：`ds-saver@0.4.1` 已发布（`latest`）；`0.0.0-stage` 占位版本已 deprecate
+- 第三方库：仓库已有 `dsh-plugin` topic；awesome-deepseek-harness-plugins 已收录（PR #1124），deepseek1024.com 目录已出现 `T1113047/ds-saver`
 - 本地 tarball：`ds-saver-0.4.1.tgz`（在仓库根目录，已 gitignore）
 
 ## 2. 这次做了什么

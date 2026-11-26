@@ -147,5 +147,22 @@ rag(query="重试逻辑在哪", path="src", filter=true, filter_topK=5, model="h
 
 在全新 DSH 上实测：`picked 2 / candidates 2`，两条都带摘要与命中理由。
 
+## 附：0.4.x 的打包与一键安装
+
+0.4.0 把插件、3 个 skills、计量/索引工具和 RAG 模板收进 `bundle/`：
+
+```sh
+DS_SAVER_WORKSPACE=/path/to/your/workspace ./install.sh
+```
+
+`ctx_status` 不再依赖工作区里那份 `ctx-usage.py`，包内自带 `bundle/tools/ctx-usage.py`，并优先 `python3`、回退 `python`。0.4.1 没有运行时变更，只是把最新 README（含“不会调试？”说明与预置 skill 提示词）同步进 npm 包。
+
+现在两条安装路径都已实测：
+
+```sh
+dsh plugin --profile <profile> add ds-saver        # npm registry
+npm install ds-saver                                # 0.4.1
+```
+
 仓库：<https://github.com/T1113047/ds-saver>
 

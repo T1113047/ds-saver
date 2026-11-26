@@ -161,7 +161,7 @@ DS_SAVER_WORKSPACE=/path/to/your/workspace ./install.sh
 
 ```sh
 dsh plugin --profile <profile> add ds-saver        # npm registry
-npm install ds-saver                                # 0.4.2
+npm install ds-saver                                # 0.4.3
 ```
 
 仓库：<https://github.com/T1113047/ds-saver>

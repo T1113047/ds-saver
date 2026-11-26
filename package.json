@@ -4,6 +4,14 @@
   "description": "Context and token saver for DeepSeek workflows on OpenCode and DeepSeek Harness (DSH)",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/T1113047/ds-saver.git"
+  },
+  "homepage": "https://github.com/T1113047/ds-saver#readme",
+  "bugs": {
+    "url": "https://github.com/T1113047/ds-saver/issues"
+  },
   "main": "index.js",
   "exports": {
     ".": "./index.js",

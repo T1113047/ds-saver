@@ -1,6 +1,6 @@
 {
   "name": "ds-saver",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Context and token saver for DeepSeek workflows on OpenCode and DeepSeek Harness (DSH)",
   "type": "module",
   "license": "MIT",
@@ -50,20 +50,9 @@
       "patch": "./cordis.patch.yml"
     }
   },
-  "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "0.2.2-rc.5",
-    "@deepseek-ai/cordis": "~4.1.0"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-tools": {
-      "optional": true
-    },
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
-  },
   "scripts": {
     "test": "node test/smoke.mjs",
     "check": "node --check index.js && node --check dsh/index.js && node --check test/smoke.mjs"
   }
 }
+

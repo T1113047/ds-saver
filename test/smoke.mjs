@@ -155,7 +155,7 @@ try {
   const extra = path.join(tmp, "extra.md");
   await fs.writeFile(extra, "额外事实 42");
   calls = installFetch((_call, n) =>
-    n === 1 ? ok(`{"read":["${extra}"]}`) : ok("最终结论 来源:extra:1"),
+    n === 1 ? ok(JSON.stringify({ read: [extra] })) : ok("最终结论 来源:extra:1"),
   );
   const agent = await misc.execute(
     { task: "找 42", mode: "agent", paths: [sample], max_lines: 5 },

@@ -3,20 +3,156 @@
  *
  * 与 OpenCode 入口（../index.js）共享纯逻辑，只做注册映射：
  *   OpenCode: Plugin.define({ id, setup }) + ctx.tool.transform
- *   DSH:      具名 name / inject / apply + ctx.tools.register(defineTool)
+ *   DSH:      具名 name / inject / apply + ctx.tools.register(definition)
  *
- * 本文件只应在 DSH 环境加载；OpenCode 不会读取 exports["./dsh"]。
+ * 注意：这里**不 import** `@deepseek-ai/dsh-tools`。第三方插件通常以
+ * `link:` / 本地目录安装，Node 不会从 DSH 安装目录解析 peerDependency，
+ * 直接 import 会在全新 DSH 上报 "Cannot find package
+ * '@deepseek-ai/dsh-tools'"。`defineDshTool` 是等价的本地实现：
+ * 把参数 DSL 编译成原始 JSON Schema，并在 execute 前校验参数。
  */
 
-import { defineTool } from "@deepseek-ai/dsh-tools";
 import { core } from "../index.js";
 
-const ROOT = process.env.DS_SAVER_WORKSPACE || process.cwd();
+/** 把作者侧 value schema DSL 编译成 DSH 接受的原始 JSON Schema 子集。 */
+function compileValueSchema(spec) {
+  if (!spec || typeof spec !== "object") {
+    throw new Error("ds-saver: value schema must be an object");
+  }
 
-const textOutput = {
-  schema: { type: "string" },
-  render: (_args, value) => [{ type: "text", text: value }],
-};
+  const out = {};
+  for (const key of ["title", "description", "default", "examples"]) {
+    if (spec[key] !== undefined) out[key] = spec[key];
+  }
+
+  switch (spec.type) {
+    case "string":
+    case "number":
+    case "integer":
+    case "boolean":
+      out.type = spec.type;
+      if (spec.enum !== undefined) out.enum = [...spec.enum];
+      if (spec.const !== undefined) out.const = spec.const;
+      return out;
+    case "null":
+      out.type = "null";
+      return out;
+    case "array":
+      out.type = "array";
+      out.items = spec.items ? compileValueSchema(spec.items) : {};
+      return out;
+    case "object": {
+      out.type = "object";
+      const properties = {};
+      for (const [name, child] of Object.entries(spec.properties || {})) {
+        properties[name] = compileValueSchema(child);
+      }
+      out.properties = properties;
+      out.additionalProperties = spec.additionalProperties === true;
+      return out;
+    }
+    case "json":
+      // 作者侧仅标注任意 JSON；线上 schema 用空约束表示。
+      return out;
+    case "oneOf":
+      if (!Array.isArray(spec.oneOf) || spec.oneOf.length < 2) {
+        throw new Error("ds-saver: oneOf requires at least two branches");
+      }
+      out.oneOf = spec.oneOf.map(compileValueSchema);
+      return out;
+    default:
+      throw new Error(`ds-saver: unsupported schema type ${JSON.stringify(spec.type)}`);
+  }
+}
+
+/** 参数 DSL → 隐式 object 根 JSON Schema；`required: true` 收集为 required 数组。 */
+function compileParameters(parameters) {
+  const properties = {};
+  const required = [];
+  for (const [name, spec] of Object.entries(parameters || {})) {
+    const { required: isRequired, ...valueSpec } = spec;
+    properties[name] = compileValueSchema(valueSpec);
+    if (isRequired === true) required.push(name);
+  }
+  const schema = { type: "object", properties };
+  if (required.length > 0) schema.required = required;
+  return schema;
+}
+
+/** 校验模型参数，返回违规列表；空数组表示通过。 */
+function validateValue(schema, value, path) {
+  if (schema.const !== undefined) {
+    if (value !== schema.const) return [`${path} must equal const`];
+  }
+  if (schema.enum !== undefined && !schema.enum.includes(value)) {
+    return [`${path} must be one of the declared values`];
+  }
+
+  const type = schema.type;
+  if (type === undefined) return [];
+  const ok =
+    type === "string" ? typeof value === "string"
+      : type === "number" ? typeof value === "number" && Number.isFinite(value)
+        : type === "integer" ? Number.isInteger(value)
+          : type === "boolean" ? typeof value === "boolean"
+            : type === "null" ? value === null
+              : type === "array" ? Array.isArray(value)
+                : type === "object" ? value !== null && typeof value === "object" && !Array.isArray(value)
+                  : true;
+  if (!ok) return [`${path || "arguments"} must be ${type}`];
+
+  if (type === "array" && schema.items) {
+    const violations = [];
+    value.forEach((item, index) => {
+      violations.push(...validateValue(schema.items, item, `${path}[${index}]`));
+    });
+    return violations;
+  }
+
+  if (type === "object") {
+    const violations = [];
+    for (const key of schema.required || []) {
+      if (!(key in value)) violations.push(`${path}.${key} is required`);
+    }
+    for (const [key, child] of Object.entries(schema.properties || {})) {
+      if (key in value) violations.push(...validateValue(child, value[key], `${path}.${key}`));
+    }
+    return violations;
+  }
+
+  return [];
+}
+
+/**
+ * 等价于 `@deepseek-ai/dsh-tools` 的 `defineTool`（本项目用到的子集）：
+ * 编译参数/输出 schema、校验参数、返回注册就绪的 definition。
+ */
+function defineDshTool(options) {
+  const parameters = compileParameters(options.parameters);
+  const outputSchema = compileValueSchema(options.output.schema);
+  const render = options.output.render;
+
+  return {
+    name: options.name,
+    description: options.description,
+    parameters,
+    output: {
+      schema: outputSchema,
+      render(args, value) {
+        return render(args, value);
+      },
+    },
+    async execute(args, exec) {
+      const violations = validateValue(parameters, args, "");
+      if (violations.length > 0) {
+        const error = new Error(`invalid arguments: ${violations.join("; ")}`);
+        error.name = "ToolArgsError";
+        throw error;
+      }
+      return options.execute(args || {}, exec);
+    },
+  };
+}
 
 function assertNotAborted(exec) {
   if (exec?.signal?.aborted) {
@@ -26,12 +162,15 @@ function assertNotAborted(exec) {
   }
 }
 
-function toText(name, description, parameters, run) {
-  return defineTool({
+function textTool(name, description, parameters, run) {
+  return defineDshTool({
     name,
     description,
     parameters,
-    output: textOutput,
+    output: {
+      schema: { type: "string" },
+      render: (_args, value) => [{ type: "text", text: value }],
+    },
     async execute(args, exec) {
       assertNotAborted(exec);
       const result = await run(args || {});
@@ -41,17 +180,22 @@ function toText(name, description, parameters, run) {
   });
 }
 
-const tree = core.treeTool(ROOT);
-const rag = core.ragTool(ROOT);
-const misc = core.miscTool(ROOT);
-const handoff = core.handoffTool();
+function workspaceRoot() {
+  return process.env.DS_SAVER_WORKSPACE || process.cwd();
+}
 
 export const name = "ds-saver";
 export const inject = ["tools"];
 
 export function apply(ctx) {
+  const root = workspaceRoot();
+  const tree = core.treeTool(root);
+  const rag = core.ragTool(root);
+  const misc = core.miscTool(root);
+  const handoff = core.handoffTool();
+
   ctx.tools.register(
-    toText(
+    textTool(
       "tree",
       "只读输出紧凑目录树；默认忽略 .git/node_modules/构建产物，敏感路径返回空。",
       {
@@ -64,7 +208,7 @@ export function apply(ctx) {
   );
 
   ctx.tools.register(
-    toText(
+    textTool(
       "rag",
       "轻量本地检索：优先外部命令 DS_SAVER_RAG_CMD，否则内置行匹配。",
       {
@@ -78,7 +222,7 @@ export function apply(ctx) {
   );
 
   ctx.tools.register(
-    toText(
+    textTool(
       "misc",
       "用便宜官方模型筛选材料/日志/文档，只回短结论。DSH 版不支持 paths 参数，请把内容放进 material。",
       {
@@ -95,7 +239,7 @@ export function apply(ctx) {
   );
 
   ctx.tools.register(
-    toText(
+    textTool(
       "handoff",
       "生成紧凑交接文档并落盘（默认写入 DS_SAVER_HANDOFF_DIR 或 cwd/.handoff）。",
       {

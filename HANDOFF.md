@@ -6,12 +6,13 @@
 
 ## 1. 一句话状态
 
-OpenCode 端与 DSH 端都已完成实机验证；`0.4.1` 已推送到 GitHub `main` 并发布到 npm `latest`，但 Windows 打包带入 CRLF 行尾；`0.4.2` 已修 LF 并推送 GitHub，待 npm 发布。
+OpenCode 端与 DSH 端都已完成实机验证；`0.4.2` 已推送到 GitHub `main` 并发布到 npm `latest`，修复了 0.4.0 / 0.4.1 的 CRLF 行尾问题；`0.4.1` 已 deprecate。
 
 - GitHub：<https://github.com/T1113047/ds-saver>（`main` = 0.4.2）
-- npm：`ds-saver@0.4.1` 已发布（`latest`，`bundle/install.sh` 在 Unix 因 CRLF 不可执行，建议 deprecate）；`0.4.2` 待发布
-- 第三方库：仓库已有 `dsh-plugin` topic；awesome-deepseek-harness-plugins 已收录（PR #1124），deepseek1024.com 目录已出现 `T1113047/ds-saver`
-- 本地 tarball：`ds-saver-0.4.1.tgz`（在仓库根目录，已 gitignore）
+- npm：`ds-saver@0.4.2` 已发布（`latest`）；`0.4.1` 已 deprecate（CRLF 导致 Unix 下 `bundle/install.sh` 失败）
+- 发布自动化：`.github/workflows/release.yml` 用 npm Trusted Publishing（OIDC）在 `v*` tag 上自动发布；一次性配置见 `docs/release-automation.md`
+- 第三方库：仓库已有 `dsh-plugin` topic；awesome-deepseek-harness-plugins 已收录（PR #1124），deepseek1024.com 目录已出现 `T1113047/ds-saver`；目录的 `install` 仍是 GitHub 目标，等 npm 身份同步后 Market 才会标为可自动安装
+- 本地 tarball：`ds-saver-0.4.2.tgz`（在仓库根目录，已 gitignore）
 
 ## 2. 这次做了什么
 

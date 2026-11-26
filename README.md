@@ -227,6 +227,7 @@ ctx_calibrate(actual_turns=20, actual_context=620000, actual_next_prompt=11200, 
 - `docs/calibration-protocol.md`：预测偏差 > 阈值时的 `ctx_calibrate` 协议与交接模板
 - `docs/dsh-adapter.md`：双端入口、参数差异与 `engines.dsh` 约束
 - `docs/dsh-verification.md`：全新 DSH profile 的安装与四工具实测记录
+- `docs/release-automation.md`：GitHub Actions 自动发布与 Community Market 部署说明
 - `docs/article-dsh-fresh-install.md`：从翻车到修复的完整发布文章
 - `data/deepseek-context-2026-11-26.json`：可公开的聚合数据（无正文/路径/密钥）
 - `scripts/measure-context.py`：复现组成、分桶、前后半段、最终分布
